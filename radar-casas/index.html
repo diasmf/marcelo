@@ -50,14 +50,23 @@ if(id.startsWith('ven-')||id.startsWith('alu-'))return /^(www\.)?argenprop\.com$
 return false;
 }catch(e){return false}
 }
-function tryPhoto(url){return new Promise(function(done){var img=new Image();var ended=false;var timer=setTimeout(function(){if(!ended){ended=true;done(false)}},6500);img.onload=function(){if(ended)return;ended=true;clearTimeout(timer);done(img.naturalWidth>250&&img.naturalHeight>180)};img.onerror=function(){if(ended)return;ended=true;clearTimeout(timer);done(false)};img.src=url})}
+function tryPhoto(url){return new Promise(function(done){var img=new Image();var ended=false;var timer=setTimeout(function(){if(!ended){ended=true;done(false)}},12000);img.onload=function(){if(ended)return;ended=true;clearTimeout(timer);done(img.naturalWidth>250&&img.naturalHeight>180)};img.onerror=function(){if(ended)return;ended=true;clearTimeout(timer);done(false)};img.src=url})}
 async function verifyAllPhotos(){
+ photosChecked=false;
+ render();
  await Promise.all(state.listings.map(async function(x){
   var candidates=Array.from(new Set((Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]).filter(function(v){return typeof v==='string'&&/^https:\/\//.test(v)})));
-  var checked=await Promise.all(candidates.map(tryPhoto));
-  verifiedImageCache[x.id]=candidates.filter(function(_,i){return checked[i]});
+  for(var i=0;i<Math.min(candidates.length,3);i++){
+   if(await tryPhoto(candidates[i])){
+    verifiedImageCache[x.id]=[candidates[i]].concat(candidates.filter(function(u){return u!==candidates[i]}));
+    render();
+    return;
+   }
+  }
+  verifiedImageCache[x.id]=[];
  }));
- photosChecked=true;render();
+ photosChecked=true;
+ render();
 }
 var photoIndexes={};
 function photosFor(x){return verifiedImageCache[x.id]||[]}
