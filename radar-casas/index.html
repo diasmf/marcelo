@@ -9,7 +9,7 @@
 <script>
 (function(){
 'use strict';
-var BASE='https://qfuflpvxcgvivsihlkwb.supabase.co/functions/v1/radar-casas-caba';
+var BASE='';
 var state={tab:'aluguel',listings:[],agencies:[],ratings:{},ownerKey:localStorage.getItem('radar-caba-key')||''};
 var frag=location.hash.match(/(?:^#|&)access=([^&]+)/);
 if(frag){state.ownerKey=decodeURIComponent(frag[1]);localStorage.setItem('radar-caba-key',state.ownerKey);history.replaceState({},'',location.pathname);}
