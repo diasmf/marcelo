@@ -2,8 +2,12 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://qfuflpvxcgvivsihlkwb.supabase.co/functions/v1/radar-casas-caba/api/:path*"
+      "source": "/api/listings",
+      "destination": "https://qfuflpvxcgvivsihlkwb.supabase.co/functions/v1/radar-casas-dados"
+    },
+    {
+      "source": "/api/reviews",
+      "destination": "https://qfuflpvxcgvivsihlkwb.supabase.co/functions/v1/radar-casas-caba/api/reviews"
     }
   ]
 }
