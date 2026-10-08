@@ -8,6 +8,10 @@
     {
       "source": "/api/reviews",
       "destination": "https://qfuflpvxcgvivsihlkwb.supabase.co/functions/v1/radar-casas-caba/api/reviews"
+    },
+    {
+      "source": "/api/photo-discovery",
+      "destination": "https://qfuflpvxcgvivsihlkwb.supabase.co/functions/v1/radar-photo-discovery"
     }
   ]
 }
