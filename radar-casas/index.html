@@ -146,17 +146,42 @@ function resemblesDislikedPattern(x){
 function isDiscarded(x){return (state.ratings[x.id]||{}).rating==='reject'}
 function isSuppressed(x){return !isDiscarded(x)&&resemblesDislikedPattern(x)}
 function render(){
-el('rentCount').textContent=state.listings.filter(function(x){return x.mode==='aluguel' && (verifiedImageCache[x.id]||[]).length>0}).length;el('saleCount').textContent=state.listings.filter(function(x){return x.mode==='venda' && inSaleRange(x) && (verifiedImageCache[x.id]||[]).length>0}).length;el('favCount').textContent=Object.values(state.ratings).filter(function(r){return r.rating==='like'}).length;el('ownerBtn').textContent=state.ownerKey?'✓ Sincronização ativa':'☁ Sincronizar escolhas';
-if(state.tab==='agencies'){el('agencyCards').innerHTML=state.agencies.map(function(a){return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(a.bairro)+'</small><a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Abrir site da imobiliária ↗</a></div>'}).join('');return;}
-var arr=state.listings.filter(function(x){return (verifiedImageCache[x.id]||[]).length>0 && (state.tab==='favorites'||inSaleRange(x)) && (state.tab==='favorites'?(state.ratings[x.id]||{}).rating==='like':x.mode===state.tab)});
-var txt=el('search').value.trim().toLowerCase(),b=el('neighborhood').value,out=el('outdoor').checked,garage=el('garage').checked;
-arr=arr.filter(function(x){return (!txt||[x.address,x.bairro,x.agency,x.detail].join(' ').toLowerCase().includes(txt))&&(!b||x.bairro===b)&&(!out||x.patio)&&(!garage||x.garage)});
-var order=el('order').value;if(order==='low')arr.sort(function(a,b){return (a.price===null?Infinity:a.price)-(b.price===null?Infinity:b.price)});if(order==='high')arr.sort(function(a,b){return (b.price===null?-1:b.price)-(a.price===null?-1:a.price)});if(order==='area')arr.sort(function(a,b){return Number(b.area||0)-Number(a.area||0)});
-el('heading').textContent=state.tab==='venda'?'Casas e PHs à venda':state.tab==='favorites'?'Seus imóveis favoritos':'Casas e PHs para alugar';el('subtitle').textContent=photosChecked?arr.length+' imóveis com fotos verificadas · 2+ dormitórios · Somente CABA'+(state.tab==='venda'&&el('saleRange').value==='target'?' · US$ 80–150 mil':''):'Verificando as fotos antes de mostrar os imóveis…';
+ var recentOnly=el('published15').checked;
+ var showSimilar=el('showSimilar').checked;
+ var eligible=function(x){return (verifiedImageCache[x.id]||[]).length>0&&(!recentOnly||publishedRecently(x))};
+ var visible=function(x){return eligible(x)&&!isDiscarded(x)&&(showSimilar||!isSuppressed(x))};
+ el('rentCount').textContent=state.listings.filter(function(x){return x.mode==='aluguel'&&visible(x)}).length;
+ el('saleCount').textContent=state.listings.filter(function(x){return x.mode==='venda'&&visible(x)}).length;
+ el('favCount').textContent=Object.values(state.ratings).filter(function(r){return r.rating==='like'}).length;
+ el('ownerBtn').textContent=state.ownerKey?'✓ Sincronização ativa':'☁ Sincronizar escolhas';
+ if(state.tab==='agencies'){
+  el('agencyCards').innerHTML=state.agencies.map(function(a){return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(a.bairro)+'</small><a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Abrir site da imobiliária ↗</a></div>'}).join('');
+  return;
+ }
+ var arr=state.listings.filter(function(x){
+  if(!eligible(x))return false;
+  if(state.tab==='rejected')return isDiscarded(x)||isSuppressed(x);
+  if(isDiscarded(x))return false;
+  if(state.tab==='favorites')return (state.ratings[x.id]||{}).rating==='like';
+  return x.mode===state.tab&&(showSimilar||!isSuppressed(x));
+ });
+ var txt=el('search').value.trim().toLowerCase(),b=el('neighborhood').value,out=el('outdoor').checked,garage=el('garage').checked;
+ arr=arr.filter(function(x){return (!txt||[x.address,x.bairro,x.agency,x.detail].join(' ').toLowerCase().includes(txt))&&(!b||x.bairro===b)&&(!out||x.patio)&&(!garage||x.garage)});
+ var order=el('order').value;
+ if(order==='low')arr.sort(function(a,b){return (a.price===null?Infinity:a.price)-(b.price===null?Infinity:b.price)});
+ if(order==='high')arr.sort(function(a,b){return (b.price===null?-1:b.price)-(a.price===null?-1:a.price)});
+ if(order==='area')arr.sort(function(a,b){return Number(b.area||0)-Number(a.area||0)});
+ if(order==='recent')arr.sort(function(a,b){return String(b.published_at||b.discovered_at||'').localeCompare(String(a.published_at||a.discovered_at||''))});
+ el('heading').textContent=state.tab==='venda'?'Casas e PHs à venda':state.tab==='favorites'?'Seus imóveis favoritos':state.tab==='rejected'?'Descartados e ocultados por preferências':'Casas e PHs para alugar';
+ var msg=arr.length+' opções com fotos verificadas · 2+ dormitórios · Somente CABA';
+ if(recentOnly)msg+=' · Publicação original nos últimos 15 dias';
+ if(recentOnly&&!state.listings.some(function(x){return publishedRecently(x)}))msg='Ainda não há anúncios com data ORIGINAL de publicação comprovada nos últimos 15 dias. A data de descoberta pelo radar não é usada como publicação.';
+ if(!photosChecked)msg='Verificando as fotos antes de mostrar os imóveis…';
+ el('subtitle').textContent=msg;
 el('cards').innerHTML=arr.length?arr.map(function(x){var r=state.ratings[x.id]||{};var images=photosFor(x);var pic=images.length?images.map(function(url,i){return '<img class="slide" data-slide="'+i+'" src="'+safeUrl(url)+'" alt="Foto '+(i+1)+' de '+esc(x.address)+'" loading="lazy" '+(i?'hidden':'')+'>'}).join('')+'<button class="zoom" data-zoom="'+esc(x.id)+'" aria-label="Ampliar foto"></button>'+(images.length>1?'<button class="photo-nav photo-prev" data-advance="-1" data-id="'+esc(x.id)+'" aria-label="Foto anterior">‹</button><button class="photo-nav photo-next" data-advance="1" data-id="'+esc(x.id)+'" aria-label="Próxima foto">›</button><span class="photo-count" data-count="'+esc(x.id)+'">1 / '+images.length+'</span>':''): '<div class="placeholder">'+houseIcon()+'<span>Fotos ainda não cadastradas</span></div>';return '<article class="card"><div class="photo">'+pic+'<span class="pill">'+esc(x.tag||x.tipo)+'</span><a class="gallery" target="_blank" rel="noopener noreferrer" href="'+safeUrl(x.url)+'">▧ Ver fotos ↗</a></div><div class="body"><div class="sub">'+esc(x.bairro)+' · '+esc(x.tipo)+' · '+(x.mode==='venda'?'Venda':'Aluguel')+'</div><div class="address">'+esc(x.address)+'</div><div class="price">'+money(x)+'</div><div class="facts"><span>▤ '+esc(x.beds)+' dorm.</span>'+(x.area?'<span>◫ '+esc(x.area)+' m²</span>':'')+(x.patio?'<span>♧ Pátio/terraço</span>':'')+(x.garage?'<span>▣ Garagem</span>':'')+'</div><div class="detail">'+esc(x.detail)+'</div><div class="agency">⌂ '+esc(x.agency)+'</div><div class="status">ℹ Página do anúncio verificada'+(x.status_checked_at?' em '+new Date(x.status_checked_at).toLocaleDateString("pt-BR"):'')+' · Disponibilidade a confirmar com a imobiliária.</div><div class="actions"><button data-rating="like" data-id="'+esc(x.id)+'" class="'+(r.rating==='like'?'active':'')+'">♡ Gostei</button><button data-rating="reject" data-id="'+esc(x.id)+'" class="'+(r.rating==='reject'?'reject':'')+'">✕ Não gostei</button></div><textarea data-note="'+esc(x.id)+'" placeholder="O que gostou ou não gostou?">'+esc(r.note||'')+'</textarea><div class="links"><a href="'+safeUrl(x.url)+'" target="_blank" rel="noopener noreferrer">Anúncio original ↗</a><a href="https://www.google.com/maps/search/?api=1&amp;query='+encodeURIComponent(x.address+', '+x.bairro+', CABA')+'" target="_blank" rel="noopener noreferrer">⌖ Mapa</a></div></div></article>'}).join('') :'<div class="blank">'+(!photosChecked?'Verificando fotografias…':(state.tab==='aluguel'?'Ainda não há aluguéis com fotos confirmadas. Existem anúncios em análise, mas eles ficam ocultos até as imagens carregarem corretamente.':'Nenhum imóvel com fotos confirmadas atende aos filtros.'))+'</div>';
 }
 async function fetchJson(path,options){var response=await fetch(BASE+path,options||{});var json=await response.json().catch(function(){return {error:'Erro de resposta do servidor'}});if(!response.ok)throw Error(json.error||'Erro ao carregar');return json}
-async function load(){try{var res=await fetchJson('/api/listings');state.listings=res.listings||[];state.agencies=res.agencies||[];el('state').textContent='Radar online · '+new Date().toLocaleDateString('pt-BR');verifyAllPhotos();await loadReviews()}catch(e){el('cards').innerHTML='<div class="blank">Erro ao carregar os imóveis. Atualize a página.</div>';el('state').textContent='Falha ao carregar';toast(e.message)}}
+async function load(){try{var res=await fetchJson('/api/listings');state.listings=res.listings||[];state.agencies=res.agencies||[];rebuildLearning();el('state').textContent='Radar online · '+new Date().toLocaleDateString('pt-BR');verifyAllPhotos();await loadReviews()}catch(e){el('cards').innerHTML='<div class="blank">Erro ao carregar os imóveis. Atualize a página.</div>';el('state').textContent='Falha ao carregar';toast(e.message)}}
 async function loadReviews(){
  if(!state.ownerKey)return false;
  try {
@@ -166,7 +191,7 @@ async function loadReviews(){
    (cloud.reviews||[]).forEach(function(r){ratings[r.listing_id]={rating:r.rating==='visit'?'like':r.rating,note:r.note||''}});
    Object.keys(local).forEach(function(id){ratings[id]=local[id]});
    state.ratings=ratings;
-   storeRatings();render();
+   rebuildLearning();storeRatings();render();
    var unsynced=0;
    for(var id of Object.keys(local)){
       try{
@@ -198,6 +223,7 @@ async function saveReview(id,patch){
  var current=state.ratings[id]||{rating:'',note:''};
  var next=Object.assign({},current,patch);
  state.ratings[id]=next;
+ capturePreference(id,next.rating);
  storeRatings();
  render();
  if(!state.ownerKey){toast('✓ Escolha salva neste aparelho');return}
@@ -208,7 +234,7 @@ async function saveReview(id,patch){
  }catch(e){toast('✓ Salvo neste aparelho · sincronização indisponível')}
 }
 document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){setTab(b.dataset.tab)})});
-['search','neighborhood','saleRange','order','outdoor','garage'].forEach(function(k){el(k).addEventListener('input',render)});
+['search','neighborhood','order','outdoor','garage','published15','showSimilar'].forEach(function(k){el(k).addEventListener('input',render)});
 el('ownerBtn').addEventListener('click',async function(){if(state.ownerKey){toast('Suas avaliações estão sincronizadas.');return}await ensureOwner()});
 el('cards').addEventListener('click',function(e){var a=e.target.closest('[data-advance]');if(a){setCardSlide(a.dataset.id,Number(a.dataset.advance));return}var z=e.target.closest('[data-zoom]');if(z){openLightbox(z.dataset.zoom);return}var t=e.target.closest('[data-rating]');if(t){var id=t.getAttribute('data-id'),what=t.getAttribute('data-rating');saveReview(id,{rating:(state.ratings[id]||{}).rating===what?'':what})}});
 el('cards').addEventListener('change',function(e){var t=e.target.closest('[data-note]');if(t)saveReview(t.getAttribute('data-note'),{note:t.value.slice(0,1200)})});
