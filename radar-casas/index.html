@@ -148,7 +148,7 @@ function isSuppressed(x){return !isDiscarded(x)&&resemblesDislikedPattern(x)}
 function render(){
  var recentOnly=el('published15').checked;
  var showSimilar=el('showSimilar').checked;
- var eligible=function(x){return (verifiedImageCache[x.id]||[]).length>0&&(!recentOnly||publishedRecently(x))};
+ var eligible=function(x){var knownArea=x.area!==null&&x.area!==undefined&&x.area!==''&&Number(x.area)>0;return (x.mode!=='aluguel'||!knownArea||Number(x.area)>=60)&&(verifiedImageCache[x.id]||[]).length>0&&(!recentOnly||publishedRecently(x))};
  var visible=function(x){return eligible(x)&&!isDiscarded(x)&&(showSimilar||!isSuppressed(x))};
  el('rentCount').textContent=state.listings.filter(function(x){return x.mode==='aluguel'&&visible(x)}).length;
  el('saleCount').textContent=state.listings.filter(function(x){return x.mode==='venda'&&visible(x)}).length;
@@ -173,7 +173,7 @@ function render(){
  if(order==='area')arr.sort(function(a,b){return Number(b.area||0)-Number(a.area||0)});
  if(order==='recent')arr.sort(function(a,b){return String(b.published_at||b.discovered_at||'').localeCompare(String(a.published_at||a.discovered_at||''))});
  el('heading').textContent=state.tab==='venda'?'Imóveis à venda':state.tab==='favorites'?'Seus imóveis favoritos':state.tab==='rejected'?'Descartados e ocultados por preferências':'Imóveis para alugar';
- var msg=arr.length+' opções com fotos verificadas · 2+ dormitórios · Somente CABA';
+ var msg=arr.length+' opções com fotos verificadas · 2+ dormitórios · Somente CABA'+(state.tab==='aluguel'?' · ≥ 60 m² quando informado':'');
  if(recentOnly)msg+=' · Publicação original nos últimos 15 dias';
  if(recentOnly&&!state.listings.some(function(x){return publishedRecently(x)}))msg='Ainda não há anúncios com data ORIGINAL de publicação comprovada nos últimos 15 dias. A data de descoberta pelo radar não é usada como publicação.';
  if(!photosChecked)msg='Verificando as fotos antes de mostrar os imóveis…';
