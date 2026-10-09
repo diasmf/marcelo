@@ -16,8 +16,8 @@
 #photoLightbox .lbCaption{color:#eef7ef;font-size:13px;padding:13px;text-align:center}
 </style></head><body><div class="wrap"><header class="bar"><div class="logo"><i>⌂</i> Meu Radar de Casas</div><div class="date">Capital Federal · Buenos Aires<br><span id="state">Carregando imóveis…</span></div></header>
 <section class="hero"><div><div class="eyebrow">Busca personalizada em CABA</div><h1>Uma casa para chamar de sua.</h1><p>Aluguel e venda com imagens verificadas. Deslize pelas fotos e amplie sem sair da lista.</p></div><div class="statgrid"><div class="stat"><b id="rentCount">—</b><small>aluguéis</small></div><div class="stat"><b id="saleCount">—</b><small>à venda</small></div><div class="stat"><b id="favCount">—</b><small>favoritos</small></div></div></section>
-<nav class="nav"><button class="tab active" data-tab="aluguel">⌂ Aluguel</button><button class="tab" data-tab="venda">◇ À venda</button><button class="tab" data-tab="favorites">♥ Favoritos</button><button class="tab" data-tab="agencies">▤ Imobiliárias</button><button id="ownerBtn" class="owner" title="Sincronizar escolhas entre dispositivos">☁ Sincronizar escolhas</button></nav>
-<div id="propertyView"><div class="filter"><input id="search" type="search" placeholder="Buscar endereço, bairro ou corretora"><select id="neighborhood"><option value="">Todos os bairros</option><option>Liniers</option><option>Mataderos</option><option>Villa Luro</option><option>Versalles</option><option>Vélez Sarsfield</option><option>Villa Devoto</option></select><select id="saleRange" class="hidden" title="Faixa de preço para compra"><option value="target">Compra · US$ 80–150 mil</option><option value="under150">Até US$ 150 mil</option><option value="all">Todos os preços</option></select><select id="order"><option value="recent">Mais recentes</option><option value="low">Menor preço</option><option value="high">Maior preço</option><option value="area">Maior área</option></select><label class="check"><input id="outdoor" type="checkbox">Pátio/terraço</label><label class="check"><input id="garage" type="checkbox">Garagem</label></div><div class="sectionhead"><h2 id="heading">Casas para alugar</h2><p id="subtitle">Carregando os imóveis</p></div><main class="cards" id="cards"><div class="blank">Buscando as opções...</div></main></div>
+<nav class="nav"><button class="tab active" data-tab="aluguel">⌂ Aluguel</button><button class="tab" data-tab="venda">◇ À venda</button><button class="tab" data-tab="favorites">♥ Favoritos</button><button class="tab" data-tab="rejected">✕ Descartados</button><button class="tab" data-tab="agencies">▤ Imobiliárias</button><button id="ownerBtn" class="owner" title="Sincronizar escolhas entre dispositivos">☁ Sincronizar escolhas</button></nav>
+<div id="propertyView"><div class="filter"><input id="search" type="search" placeholder="Buscar endereço, bairro ou corretora"><select id="neighborhood"><option value="">Todos os bairros</option><option>Liniers</option><option>Mataderos</option><option>Villa Luro</option><option>Versalles</option><option>Vélez Sarsfield</option><option>Villa Devoto</option></select><select id="order"><option value="recent">Mais recentes</option><option value="low">Menor preço</option><option value="high">Maior preço</option><option value="area">Maior área</option></select><label class="check"><input id="outdoor" type="checkbox">Pátio/terraço</label><label class="check"><input id="garage" type="checkbox">Garagem</label><label class="check" title="Só considera a data original comprovada no anúncio; não a data em que o radar o encontrou."><input id="published15" type="checkbox"> Publicados nos últimos 15 dias</label><label class="check" title="Mostra opções que os padrões dos seus descartes normalmente ocultariam."><input id="showSimilar" type="checkbox"> Mostrar semelhantes</label></div><div class="sectionhead"><h2 id="heading">Casas para alugar</h2><p id="subtitle">Carregando os imóveis</p></div><main class="cards" id="cards"><div class="blank">Buscando as opções...</div></main></div>
 <section id="agencyView" class="hidden"><div class="sectionhead"><h2>Imobiliárias da região</h2><p>Priorizamos pequenas corretoras e anúncios nos próprios sites.</p></div><div id="agencyCards" class="agencygrid"></div></section>
 <div class="notice">Anúncios podem sair do ar ou ter preços alterados. A disponibilidade ainda não foi confirmada com os anunciantes. Só exibimos imóveis cuja página original e imagens passaram nas verificações. Os anúncios são revisados automaticamente duas vezes ao dia; links removidos ou inconsistentes ficam ocultos, e consultas bloqueadas ficam pendentes. A disponibilidade final deve ser confirmada com a imobiliária.</div><footer class="footer">Radar de Casas CABA · Liniers, Mataderos, Villa Luro, Versalles, Vélez Sarsfield e Villa Devoto · Atualizações e avaliações sincronizadas online.</footer></div><div id="toast" role="status"></div><div id="photoLightbox" role="dialog" aria-modal="true" aria-label="Galeria de fotos"><button class="close" id="closeLightbox" aria-label="Fechar">×</button><button class="largeNav largePrev" id="prevLightbox" aria-label="Foto anterior">‹</button><img id="lightboxImg" alt="Foto do imóvel"><button class="largeNav largeNext" id="nextLightbox" aria-label="Foto seguinte">›</button><div class="lbCaption" id="lbCaption"></div></div>
 <script>
@@ -36,7 +36,7 @@ function toast(s){var n=el('toast');n.textContent=s;n.style.display='block';clea
 function money(x){return x.price===null?'Preço a confirmar':x.cur==='USD'?'US$ '+Number(x.price).toLocaleString('es-AR'):'$ '+Number(x.price).toLocaleString('es-AR')+'/mês'}
 function item(id){return state.listings.find(function(x){return x.id===id})}
 function houseIcon(){return '<svg viewBox="0 0 150 110" fill="none" aria-hidden="true"><path d="M15 52L75 8l60 44M30 54v50h90V54M64 104V69h23v35M44 65h13M101 65h7" stroke="#5D9377" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
-function setTab(t){state.tab=t;document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===t)});el('propertyView').classList.toggle('hidden',t==='agencies');el('agencyView').classList.toggle('hidden',t!=='agencies');el('saleRange').classList.toggle('hidden',t!=='venda');render()}
+function setTab(t){state.tab=t;document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===t)});el('propertyView').classList.toggle('hidden',t==='agencies');el('agencyView').classList.toggle('hidden',t!=='agencies');render()}
 var imageCache={};
 var verifiedImageCache={};
 var photosChecked=false;
@@ -91,13 +91,60 @@ el('cards').addEventListener('touchend',function(e){if(!touchX)return;var dx=e.c
 el('lightboxImg').addEventListener('touchstart',function(e){touchX={x:e.touches[0].clientX,id:lightboxId}},{passive:true});
 el('lightboxImg').addEventListener('touchend',function(e){if(!touchX)return;var dx=e.changedTouches[0].clientX-touchX.x;if(Math.abs(dx)>45){setCardSlide(lightboxId,dx<0?1:-1);updateLightbox()}touchX=null},{passive:true});
 
-function inSaleRange(x){
- if(x.mode!=='venda')return true;
- var limit=el('saleRange').value;
- if(limit==='all')return true;
- if(x.cur!=='USD'||x.price===null)return false;
- return limit==='target'?Number(x.price)>=80000&&Number(x.price)<=150000:Number(x.price)<=150000;
+function publishedRecently(x){
+ var iso=String(x.published_at||'').slice(0,10);
+ if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))return false;
+ var date=new Date(iso+'T12:00:00');
+ if(!Number.isFinite(date.getTime()))return false;
+ var today=new Date();today.setHours(12,0,0,0);
+ var cutoff=new Date(today);cutoff.setDate(cutoff.getDate()-14);
+ return date>=cutoff&&date<=today;
 }
+function savedPreferences(){try{var items=JSON.parse(localStorage.getItem('radar-caba-learning-v1')||'{}');return items&&typeof items==='object'&&!Array.isArray(items)?items:{}}catch(e){return {}}}
+var learningSamples=savedPreferences();
+function saveLearning(){try{localStorage.setItem('radar-caba-learning-v1',JSON.stringify(learningSamples))}catch(e){}}
+function snapshot(x){return {id:x.id,mode:x.mode,bairro:x.bairro,tipo:x.tipo,cur:x.cur,price:x.price===null?null:Number(x.price),beds:x.beds,area:x.area===null?null:Number(x.area),patio:x.patio,garage:x.garage,rating:'reject'}}
+function capturePreference(id,rating){
+ if(rating==='reject'){
+  var x=item(id);
+  if(x)learningSamples[id]=snapshot(x);
+ }else{delete learningSamples[id]}
+ saveLearning();
+}
+function rebuildLearning(){
+ var changed=false;
+ state.listings.forEach(function(x){
+  var rating=(state.ratings[x.id]||{}).rating;
+  if(rating==='reject'){learningSamples[x.id]=snapshot(x);changed=true}
+  else if(learningSamples[x.id]&&rating!=='reject'){delete learningSamples[x.id];changed=true}
+ });
+ if(changed)saveLearning();
+}
+function likeness(x,y){
+ if(x.mode!==y.mode)return 0;
+ var s=0;
+ if(x.bairro===y.bairro)s+=2;
+ if(x.tipo===y.tipo)s+=1.5;
+ if(x.beds!=null&&y.beds!=null&&Number(x.beds)===Number(y.beds))s+=0.7;
+ if(x.patio===y.patio)s+=1.3;
+ if(x.garage===y.garage)s+=0.6;
+ if(x.price!=null&&y.price!=null&&x.cur===y.cur&&Number(x.price)>0&&Number(y.price)>0
+ &&Math.max(Number(x.price),Number(y.price))/Math.min(Number(x.price),Number(y.price))<=1.25)s+=1.5;
+ if(x.area!=null&&y.area!=null&&Number(x.area)>0&&Number(y.area)>0
+ &&Math.max(Number(x.area),Number(y.area))/Math.min(Number(x.area),Number(y.area))<=1.3)s+=0.9;
+ return s;
+}
+function resemblesDislikedPattern(x){
+ if((state.ratings[x.id]||{}).rating==='like')return false;
+ var rejections=Object.values(learningSamples).filter(function(s){return s.mode===x.mode});
+ if(rejections.length<3)return false;
+ var negatives=rejections.filter(function(s){return likeness(x,s)>=5.8}).length;
+ if(negatives<3)return false;
+ var likes=state.listings.filter(function(y){return (state.ratings[y.id]||{}).rating==='like'&&likeness(x,y)>=5.8}).length;
+ return negatives>=likes+2;
+}
+function isDiscarded(x){return (state.ratings[x.id]||{}).rating==='reject'}
+function isSuppressed(x){return !isDiscarded(x)&&resemblesDislikedPattern(x)}
 function render(){
 el('rentCount').textContent=state.listings.filter(function(x){return x.mode==='aluguel' && (verifiedImageCache[x.id]||[]).length>0}).length;el('saleCount').textContent=state.listings.filter(function(x){return x.mode==='venda' && inSaleRange(x) && (verifiedImageCache[x.id]||[]).length>0}).length;el('favCount').textContent=Object.values(state.ratings).filter(function(r){return r.rating==='like'}).length;el('ownerBtn').textContent=state.ownerKey?'✓ Sincronização ativa':'☁ Sincronizar escolhas';
 if(state.tab==='agencies'){el('agencyCards').innerHTML=state.agencies.map(function(a){return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(a.bairro)+'</small><a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Abrir site da imobiliária ↗</a></div>'}).join('');return;}
