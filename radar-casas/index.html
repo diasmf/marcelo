@@ -223,32 +223,41 @@ el('cards').innerHTML=arr.length?arr.map(function(x){var r=state.ratings[x.id]||
 async function fetchJson(path,options){var response=await fetch(BASE+path,options||{});var json=await response.json().catch(function(){return {error:'Erro de resposta do servidor'}});if(!response.ok)throw Error(json.error||'Erro ao carregar');return json}
 async function load(){try{var res=await fetchJson('/api/listings');state.listings=res.listings||[];state.agencies=res.agencies||[];cacheFavouriteSnapshots();rebuildLearning();el('state').textContent='Radar online · '+new Date().toLocaleDateString('pt-BR');verifyAllPhotos();await loadReviews()}catch(e){el('cards').innerHTML='<div class="blank">Erro ao carregar os imóveis. Atualize a página.</div>';el('state').textContent='Falha ao carregar';toast(e.message)}}
 async function loadReviews(){
- if(!state.ownerKey)return false;
- try {
-   var cloud=await fetchJson('/api/reviews',{headers:{'x-radar-key':state.ownerKey}});
-   var local=localRatings();
-   var ratings={};
-   (cloud.reviews||[]).forEach(function(r){ratings[r.listing_id]={rating:r.rating==='visit'?'like':r.rating,note:r.note||''}});
-   Object.keys(local).forEach(function(id){ratings[id]=local[id]});
-   state.ratings=ratings;
-   rebuildLearning();storeRatings();render();
-   var unsynced=0;
-   for(var id of Object.keys(local)){
-      try{
-       var r=local[id];
-       await fetchJson('/api/reviews',{method:'POST',headers:{'content-type':'application/json','x-radar-key':state.ownerKey},body:JSON.stringify({id:id,rating:r.rating==='visit'?'like':r.rating||'',note:r.note||''})});
-      }catch(e){unsynced++}
-   }
-   if(unsynced)toast('Algumas escolhas estão salvas neste aparelho, mas não sincronizadas');
-   return true;
+ if(!state.ownerKey){rebuildArchive();render();return false}
+ try{
+  var cloud=await fetchJson('/api/reviews',{headers:{'x-radar-key':state.ownerKey}});
+  var local=localRatings(),remote={},ratings={},syncIds=[];
+  (cloud.reviews||[]).forEach(function(r){
+   remote[r.listing_id]={rating:r.rating==='visit'?'like':r.rating,note:r.note||'',updated_at:r.updated_at||'',snapshot:r.listing_snapshot||null};
+  });
+  ratings=Object.assign({},remote);
+  Object.keys(local).forEach(function(id){
+   var r=local[id],server=remote[id];
+   var newer=!!(r&&r._pending)&&(!server||!server.updated_at||!r.updated_at||Date.parse(r.updated_at)>=Date.parse(server.updated_at));
+   if(!server||newer){ratings[id]=r;syncIds.push(id)}
+   else if(server&&!server.snapshot&&r&&r.snapshot){ratings[id].snapshot=r.snapshot}
+  });
+  state.ratings=ratings;cacheFavouriteSnapshots();rebuildLearning();storeRatings();render();
+  var failed=0;
+  for(var id of syncIds){
+   var candidate=state.ratings[id];if(!candidate)continue;
+   try{
+    var saved=await fetchJson('/api/reviews',{method:'POST',headers:{'content-type':'application/json','x-radar-key':state.ownerKey},body:JSON.stringify({id:id,rating:candidate.rating||'',note:candidate.note||''})});
+    if(state.ratings[id]===candidate){
+     candidate._pending=false;
+     if(saved.review&&saved.review.listing_snapshot)candidate.snapshot=saved.review.listing_snapshot;
+    }
+   }catch(e){failed++}
+  }
+  rebuildArchive();storeRatings();render();
+  if(failed)toast(failed+' escolha(s) ainda não sincronizadas');
+  return failed===0;
  }catch(e){
-   if(String(e.message).includes('inválido')||String(e.message).includes('401')){
-      state.ownerKey='';localStorage.removeItem('radar-caba-key');
-      toast('Código inválido. Suas escolhas continuam salvas neste aparelho');
-   }else{
-      toast('Sem conexão para sincronizar. Suas escolhas estão salvas neste aparelho');
-   }
-   render();return false;
+  if(String(e.message).includes('inválido')||String(e.message).includes('401')){
+   state.ownerKey='';localStorage.removeItem('radar-caba-key');
+   toast('Código inválido. Suas escolhas continuam salvas neste aparelho');
+  }else toast('Sem conexão para sincronizar. Suas escolhas continuam neste aparelho');
+  rebuildArchive();render();return false;
  }
 }
 async function ensureOwner(){
@@ -261,21 +270,25 @@ async function ensureOwner(){
 }
 async function saveReview(id,patch){
  var current=state.ratings[id]||{rating:'',note:''};
- var next=Object.assign({},current,patch);
+ var next=Object.assign({},current,patch,{updated_at:new Date().toISOString(),_pending:true});
+ var listing=item(id);
+ if(next.rating==='like'&&listing&&!next.snapshot)next.snapshot=listingSnapshot(listing);
  state.ratings[id]=next;
- capturePreference(id,next.rating);
- storeRatings();
- render();
- if(!state.ownerKey){toast('✓ Escolha salva neste aparelho');return}
- try {
-  await fetchJson('/api/reviews',{method:'POST',headers:{'content-type':'application/json','x-radar-key':state.ownerKey},
+ capturePreference(id,next.rating);rebuildArchive();storeRatings();render();
+ if(!state.ownerKey){toast('♡ Salvo neste aparelho. Use Sincronizar escolhas para guardar na nuvem.');return}
+ try{
+  var saved=await fetchJson('/api/reviews',{method:'POST',headers:{'content-type':'application/json','x-radar-key':state.ownerKey},
    body:JSON.stringify({id:id,rating:next.rating||'',note:next.note||''})});
-  toast('✓ Escolha salva e sincronizada');
- }catch(e){toast('✓ Salvo neste aparelho · sincronização indisponível')}
+  if(state.ratings[id]===next){
+   next._pending=false;
+   if(saved.review&&saved.review.listing_snapshot)next.snapshot=saved.review.listing_snapshot;
+  }
+  rebuildArchive();storeRatings();render();toast('✓ Escolha salva na nuvem');
+ }catch(e){toast('Salvo neste aparelho · sincronização pendente')}
 }
 document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){setTab(b.dataset.tab)})});
 ['search','neighborhood','propertyType','order','outdoor','garage','published15','showSimilar'].forEach(function(k){el(k).addEventListener('input',render)});
-el('ownerBtn').addEventListener('click',async function(){if(state.ownerKey){toast('Suas avaliações estão sincronizadas.');return}await ensureOwner()});
+el('ownerBtn').addEventListener('click',async function(){if(state.ownerKey){var ok=await loadReviews();if(ok)toast('Sincronização conferida');return}await ensureOwner()});
 el('cards').addEventListener('click',function(e){var a=e.target.closest('[data-advance]');if(a){setCardSlide(a.dataset.id,Number(a.dataset.advance));return}var z=e.target.closest('[data-zoom]');if(z){openLightbox(z.dataset.zoom);return}var t=e.target.closest('[data-rating]');if(t){var id=t.getAttribute('data-id'),what=t.getAttribute('data-rating');saveReview(id,{rating:(state.ratings[id]||{}).rating===what?'':what})}});
 el('cards').addEventListener('change',function(e){var t=e.target.closest('[data-note]');if(t)saveReview(t.getAttribute('data-note'),{note:t.value.slice(0,1200)})});
 load();
