@@ -198,7 +198,7 @@ def main():
         print("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required", file=sys.stderr)
         return 2
     endpoint = db_url + "/rest/v1/radar_caba_listings"
-    stats = {"sources": 0, "candidates": 0, "eligible": 0, "inserted": 0, "existing": 0, "errors": 0}
+    stats = {"sources": 0, "candidates": 0, "eligible": 0, "inserted": 0, "existing": 0, "errors": 0, "reasons": {}}
     sources = list(SOURCES.items())
     if args.source_limit > 0:
         sources = sources[:args.source_limit]
@@ -213,6 +213,10 @@ def main():
                 stats["errors"] += 1
                 continue
             row, reason = parse_property(html, url, agency)
+            if not row:
+                stats["reasons"][reason] = stats["reasons"].get(reason, 0) + 1
+                if urls.index(url) < 2:
+                    print(json.dumps({"sample_url": url, "reason": reason}, ensure_ascii=False))
             if row:
                 stats["eligible"] += 1
                 if args.apply:
