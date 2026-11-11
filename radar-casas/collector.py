@@ -115,13 +115,24 @@ def candidates(session, base, limit=50):
     elif "elaltilloinmuebles.com.ar" in host:
         category_paths = ["/alquiler/"]
     elif "giacolettopropiedades.com" in host:
-        category_paths = ["/Propiedades"]
+        category_paths = ["/Alquiler", "/Propiedades"]
     elif "estudioheiberosornio.com" in host:
         category_paths = ["/Alquiler", "/Casas", "/PHs", "/Departamentos"]
     elif "maccaroni.com.ar" in host:
         category_paths = ["/propiedades?ope=A", "/propiedades?ope=A&tipo=C", "/propiedades?ope=A&tipo=P", "/propiedades?ope=A&tipo=D"]
     elif "varcasiapropiedades.com.ar" in host:
         category_paths = ["/Alquiler", "/Propiedades"]
+    elif any(domain in host for domain in (
+        "borrajopropiedades.com.ar", "varelavillalba.com.ar",
+        "clompropiedades.com.ar", "parajonpropiedades.com.ar",
+        "pallarols-santander.com", "leonelacullaripropiedades.com",
+        "magnaccapatelli.com", "vitalefeola.com.ar",
+        "bienesraicesmg.com.ar", "jorgereale.com",
+        "crivezsilvana-propiedades.com.ar", "xn--abraa-rta.com.ar")):
+        category_paths = ["/Alquiler", "/Propiedades"]
+    elif "acostainmobiliaria.com.ar" in host:
+        category_paths = ["/propiedades?ope=A", "/propiedades?ope=A&tipo=C",
+                          "/propiedades?ope=A&tipo=D", "/propiedades?ope=A&tipo=P"]
     for page in [base] + [urljoin(base, path) for path in category_paths]:
         html = fetch(session, page)
         if not html:
