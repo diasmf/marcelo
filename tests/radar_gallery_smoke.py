@@ -19,9 +19,9 @@ sample={
              record("casa-b","Maccaroni",1,45),
              record("casa-inativa","Maccaroni",3,120,"inactive"),
              record("casa-c","Bosich",3,115)],
- "agencies":[{"name":"Maccaroni","bairro":"Liniers","url":"https://maccaroni.com.ar/"},
-             {"name":"Bosich","bairro":"Liniers","url":"https://bosichbienesraices.com.ar/"},
-             {"name":"Zero Testes","bairro":"Liniers","url":"https://example.org/"}]
+ "agencies":[{"name":"Maccaroni","bairro":"Liniers","url":"https://maccaroni.com.ar/","audit_status":"links_found","audit_links_found":24,"audit_checked_at":"2026-11-11T19:11:07Z"},
+             {"name":"Bosich","bairro":"Liniers","url":"https://bosichbienesraices.com.ar/","audit_status":"no_links","audit_links_found":0},
+             {"name":"Zero Testes","bairro":"Liniers","url":"https://example.org/","audit_status":"unreachable","audit_links_found":0}]
 }
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -67,6 +67,12 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         page.locator("#diagnosticMode").uncheck()
         assert page.locator("#cards article.card").count()==1
         page.locator('[data-tab="agencies"]').click()
+        agency_text=page.locator("#agencyCards").inner_text()
+        assert "Anúncios no Radar" in agency_text
+        assert "Coleta verificada" in agency_text
+        assert "24 links encontrados" in agency_text
+        assert "Falha de acesso no teste" in agency_text
+        assert "Zero fichas cadastradas não significa zero anúncios no mercado" in agency_text
         page.locator('[data-testagency="Zero Testes"]').click()
         assert page.locator("#cards article.card").count()==0, "zero-listing source must show no results"
         assert page.locator("#diagnosticMode").is_checked()
