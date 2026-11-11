@@ -218,7 +218,7 @@ def parse_property(html, url, agency):
     if detail_url and (not title or re.search(r"^(?:buscador de propiedades|b[uú]squeda de propiedades|propiedades|inmuebles|inicio|home)\b",title,re.I)):
         # Many agencies use generic H1 on every page despite unique rental detail URLs.
         # Derive only the property type and operation from the explicit URL, not site navigation.
-        raw = urlsplit(url).path.rsplit("/",1)[-1]
+        raw = urlsplit(url).path.rstrip("/").rsplit("/",1)[-1]
         if "/p/" in urlsplit(url).path:
             raw = re.sub(r"^\d+-", "",raw)
         raw = re.sub(r"-ficha-[^-]+$", "",raw,flags=re.I)
