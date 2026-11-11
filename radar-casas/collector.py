@@ -58,7 +58,7 @@ SALE_ONLY = re.compile(r"\b(?:en venta|venta de|se vende)\b", re.I)
 ROOMS = re.compile(r"(?<!\d)(\d{1,2})\s*(?:ambientes?|amb\b)", re.I)
 BEDS = re.compile(r"(?<!\d)(\d{1,2})\s*(?:dormitorios?|habitaciones?)\b", re.I)
 AREA = re.compile(r"(?:superficie\s*(?:total|cubierta)?|sup\.?\s*(?:total|cubierta)?|área\s*(?:total|cubierta)?)[^\d]{0,18}(\d{2,4}(?:[,.]\d{1,2})?)\s*(?:m2|m²)?", re.I)
-PRICES = re.compile(r"(?:\$|ARS\s*)(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?|\d{5,9})", re.I)
+PRICES = re.compile(r"(?:\$\s*|ARS\s*)(\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?|\d{5,9})", re.I)
 STREET = re.compile(r"([A-ZÁÉÍÓÚÑ][\wáéíóúñÁÉÍÓÚÑ.]+(?:\s+[\wáéíóúñÁÉÍÓÚÑ.]+){0,4})\s+(\d{2,5})\b")
 HEADERS = {"User-Agent": "RadarCABA/1.0 (+public listing index; limited requests)", "Accept": "text/html,application/xml;q=0.9,*/*;q=0.5"}
 
