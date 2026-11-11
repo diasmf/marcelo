@@ -35,6 +35,13 @@ with socketserver.TCPServer(("127.0.0.1",0),Silent) as server:
    {"name":"interior1.png","mimeType":"image/png","buffer":png},
    {"name":"interior2.png","mimeType":"image/png","buffer":png},
   ])
+  page.wait_for_timeout(1400)
+  print("GALLERY_DEBUG",json.dumps({
+   "notice":page.locator("#toast").inner_text(),
+   "buttons":page.locator('[data-addlocal]').count(),
+   "count":page.locator('[data-count="radar-gallery-test"]').count(),
+   "pageerrors":errors
+  }),flush=True)
   page.locator('[data-count="radar-gallery-test"]').wait_for(timeout=10000)
   assert page.locator('[data-count="radar-gallery-test"]').inner_text()=="1 / 3"
   page.locator('[data-advance="1"][data-id="radar-gallery-test"]').click()
