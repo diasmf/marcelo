@@ -48,6 +48,12 @@ class PropertyParsingTests(unittest.TestCase):
         self.assertIsNone(row)
         self.assertEqual(reason,"not residential")
 
+    def test_known_two_bedroom_bener_listing_rejected(self):
+        html=page("Casa en Alquiler en Villa Devoto", "Allende 3805 Villa Devoto. Precio alquiler $ 2.000.000 / mes. Sup. total 170 m². Ambientes 3. Dormitorios 2. Baños 2. Cochera 1. Casa en lote propio, 3 ambientes, totalmente amueblada. Propiedades relacionadas Casa 4 ambientes con 3 dormitorios.")
+        row,reason=parse_property(html,"https://www.bener.com.ar/casa-en-alquiler-en-villa-devoto-ficha-h-609","Bener")
+        self.assertIsNone(row)
+        self.assertEqual(reason,"not 3 dormitorios / 4 ambientes")
+
     def test_invalid_phone_not_bedrooms(self):
         html=page("Departamento en alquiler Liniers", "Liniers. $ 750.000. Tel 216892. 2 ambientes. Superficie 80 m².")
         row,reason=parse_property(html,"https://agency.example.org/propiedad/47","Test Agency")
