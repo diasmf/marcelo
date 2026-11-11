@@ -52,6 +52,9 @@ SOURCES = {
     "Magnacca Patelli Propiedades": "https://magnaccapatelli.com/",
     "Varcasia Propiedades": "https://www.varcasiapropiedades.com.ar/",
     "Crivez Silvana": "https://www.crivezsilvana-propiedades.com.ar/",
+    "Fedele Inmobiliaria": "https://www.argenprop.com/inmobiliarias/fedele-inmobiliaria/ph",
+    "Todoroff Propiedades": "https://www.argenprop.com/ph-en-venta-en-mataderos-3-ambientes--19375060",
+    "Florencio Gonzalez Inmuebles": "https://florenciogonzalez.com.ar/",
 }
 PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
