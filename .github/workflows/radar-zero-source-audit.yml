@@ -1,0 +1,51 @@
+name: Radar - auditar fontes sem links
+on:
+  push:
+    paths:
+      - 'radar-casas/collector.py'
+      - 'radar-casas/test_collector.py'
+      - '.github/workflows/radar-zero-source-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: radar-zero-source-audit
+  cancel-in-progress: true
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - 'Acosta|Borrajo|CLOM|Giacoletto'
+          - 'Varela Villalba|Jorge Reale|MG Bienes Raíces|Vitale Feola Propiedades'
+          - 'Jorge Parajon Propiedades|Braña Inmobiliaria|Pallarols Santander Propiedades|Leonela Cullari Propiedades'
+          - 'Magnacca Patelli Propiedades|Crivez Silvana|Fedele Inmobiliaria|Todoroff Propiedades'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2'
+      - name: Unit tests
+        run: python -m unittest discover -s radar-casas -p 'test_collector.py' -v
+      - name: Inspect each agency independently (read only)
+        shell: bash
+        env:
+          AGENCIES: ${{ matrix.group }}
+        run: |
+          mkdir -p audit
+          IFS='|' read -ra NAMES <<< "$AGENCIES"
+          for agency in "${NAMES[@]}"; do
+            echo "::group::$agency"
+            python radar-casas/collector.py --source-name "$agency" --max-per-source 20 --emit-json | tee -a audit/results.jsonl
+            echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zero-source-audit-${{ strategy.job-index }}
+          path: audit/results.jsonl
+          retention-days: 14
