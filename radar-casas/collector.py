@@ -189,7 +189,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="write eligible new records to Supabase")
     ap.add_argument("--max-per-source", type=int, default=40)
-    ap.add_argument("--source-limit", type=int, default=0, help="test only the first N configured agencies")
+    ap.add_argument("--source-limit", type=int, default=0, help="test only N configured agencies")
+    ap.add_argument("--source-offset", type=int, default=0, help="skip initial agencies in the config")
     args = ap.parse_args()
     session = requests.Session()
     db_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -199,7 +200,7 @@ def main():
         return 2
     endpoint = db_url + "/rest/v1/radar_caba_listings"
     stats = {"sources": 0, "candidates": 0, "eligible": 0, "inserted": 0, "existing": 0, "errors": 0, "reasons": {}}
-    sources = list(SOURCES.items())
+    sources = list(SOURCES.items())[max(0, args.source_offset):]
     if args.source_limit > 0:
         sources = sources[:args.source_limit]
     for agency, base in sources:
