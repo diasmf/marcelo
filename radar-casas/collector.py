@@ -152,6 +152,14 @@ def parse_property(html, url, agency):
         nrooms = int(room_label.group(1))
     if bed_label and 0 < int(bed_label.group(1)) <= 12:
         nbeds = int(bed_label.group(1))
+    # Do not let recommendations or other listings turn a documented
+    # 3-ambiente / 2-dormitorio house into a false positive.
+    explicit_rooms = re.search(r"\bAmbientes?\s*:?\s*(\d{1,2})\b", text[:850], re.I)
+    explicit_beds = re.search(r"\bDormitorios?\s*:?\s*(\d{1,2})\b", text[:850], re.I)
+    if explicit_rooms and explicit_beds:
+        documented_rooms, documented_beds = int(explicit_rooms.group(1)), int(explicit_beds.group(1))
+        if 1 <= documented_rooms <= 12 and 1 <= documented_beds <= 12:
+            nrooms, nbeds = documented_rooms, documented_beds
     if nrooms < 4 and nbeds < 3:
         return None, "not 3 dormitorios / 4 ambientes"
     areas = [float(m.group(1).replace(",", ".")) for m in AREA.finditer(lead)]
