@@ -80,6 +80,10 @@ def fetch(session, url):
         return ""
 
 
+def same_host(a, b):
+    return bool(a and b and a.lower().removeprefix('www.') == b.lower().removeprefix('www.'))
+
+
 def candidates(session, base, limit=50):
     host = urlsplit(base).hostname
     found = set()
@@ -90,13 +94,13 @@ def candidates(session, base, limit=50):
         try:
             root = ET.fromstring(xml)
             links = [el.text.strip() for el in root.iter() if el.tag.endswith("loc") and el.text]
-            indexes = [x for x in links if x.endswith(".xml") and urlsplit(x).hostname == host][:5]
+            indexes = [x for x in links if x.endswith(".xml") and same_host(urlsplit(x).hostname, host)][:5]
             for index in indexes:
                 inner = fetch(session, index)
                 if inner:
                     tree = ET.fromstring(inner)
                     links.extend(el.text.strip() for el in tree.iter() if el.tag.endswith("loc") and el.text)
-            found.update(clean_url(x) for x in links if urlsplit(x).hostname == host and PROPERTY_PATH.search(urlsplit(x).path))
+            found.update(clean_url(x) for x in links if same_host(urlsplit(x).hostname, host) and PROPERTY_PATH.search(urlsplit(x).path))
         except ET.ParseError:
             pass
     html = fetch(session, base)
@@ -104,7 +108,7 @@ def candidates(session, base, limit=50):
         soup = BeautifulSoup(html, "html.parser")
         for a in soup.select("a[href]"):
             url = urljoin(base, a["href"])
-            if urlsplit(url).hostname == host and PROPERTY_PATH.search(urlsplit(url).path):
+            if same_host(urlsplit(url).hostname, host) and PROPERTY_PATH.search(urlsplit(url).path):
                 found.add(clean_url(url))
     # Prefer rental detail links before general sale inventory when scanning is capped.
     found = {u for u in found if not urlsplit(u).path.lower().startswith(("/s/", "/propiedades/venta", "/propiedades/alquiler"))}
