@@ -41,6 +41,26 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         assert page.locator("#cards article.card").count()==2, "default shows two qualifying active rentals"
         page.select_option("#agencyFilter",label="Maccaroni")
         assert page.locator("#cards article.card").count()==1, "agency filter should narrow default rentals"
+        assert page.locator("#minBeds").input_value()=="3"
+        assert page.locator("#minRooms").input_value()=="4"
+        assert page.locator("#minArea").input_value()=="60"
+        page.select_option("#minBeds","1")
+        page.select_option("#minRooms","")
+        page.fill("#minArea","")
+        assert page.locator("#cards article.card").count()==2, "custom bedrooms must include small rental"
+        page.fill("#minArea","60")
+        assert page.locator("#cards article.card").count()==1, "area threshold must filter small rental"
+        page.click("#mainPreset")
+        assert page.locator("#minBeds").input_value()=="3"
+        assert page.locator("#minRooms").input_value()=="4"
+        assert page.locator("#minArea").input_value()=="60"
+        assert page.locator("#cards article.card").count()==1
+        page.click("#showAllPreset")
+        assert page.locator("#cards article.card").count()==3
+        assert page.locator("#diagnosticMode").is_checked()
+        page.click("#mainPreset")
+        assert not page.locator("#diagnosticMode").is_checked()
+        assert page.locator("#cards article.card").count()==1
         page.locator("#diagnosticMode").check()
         assert page.locator("#cards article.card").count()==3, "diagnostic should show both invalid and inactive properties"
         assert "INATIVO" in page.locator("#cards").inner_text(), "inactive must be marked"
@@ -51,6 +71,6 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         assert page.locator("#cards article.card").count()==0, "zero-listing source must show no results"
         assert page.locator("#diagnosticMode").is_checked()
         assert not errors, errors
-        print("RADAR_FILTER_SMOKE_OK: agency, diagnostic, inactive warnings, zero listings")
+        print("RADAR_FILTER_SMOKE_OK: agency, preset, individual bedroom and area filters, diagnostic, inactive warnings, zero listings")
         browser.close()
     server.shutdown()
