@@ -36,6 +36,18 @@ class PropertyParsingTests(unittest.TestCase):
         row,reason=parse_property(html,"https://agency.example.org/propiedad/46","Test Agency")
         self.assertEqual(reason,"not 3 dormitorios / 4 ambientes")
 
+    def test_primary_labels_override_recommendation_numbers(self):
+        html=page("Casa en Alquiler", "Villa Devoto. Ambientes 3 Dormitorios 2. $ 2.000.000. Sup. total 170 m². Propiedades similares: Casa 4 ambientes 3 dormitorios.")
+        row,reason=parse_property(html,"https://agency.example.org/propiedad/48","Test Agency")
+        self.assertIsNone(row)
+        self.assertEqual(reason,"not 3 dormitorios / 4 ambientes")
+
+    def test_commercial_land_not_eligible(self):
+        html=page("4 Lotes con mejoras", "Villa Luro Alquiler $ 1.200.000. 4 ambientes 3 dormitorios. 259 m².")
+        row,reason=parse_property(html,"https://agency.example.org/propiedad/49","Test Agency")
+        self.assertIsNone(row)
+        self.assertEqual(reason,"not residential")
+
     def test_invalid_phone_not_bedrooms(self):
         html=page("Departamento en alquiler Liniers", "Liniers. $ 750.000. Tel 216892. 2 ambientes. Superficie 80 m².")
         row,reason=parse_property(html,"https://agency.example.org/propiedad/47","Test Agency")
