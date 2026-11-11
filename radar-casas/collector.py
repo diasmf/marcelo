@@ -56,7 +56,7 @@ SOURCES = {
     "Todoroff Propiedades": "https://www.argenprop.com/ph-en-venta-en-mataderos-3-ambientes--19375060",
     "Florencio Gonzalez Inmuebles": "https://florenciogonzalez.com.ar/",
 }
-PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+)", re.I)
+PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\\d{5,}-[^/?#]+|(?:casa|ph|departamento)-en-alquiler-en-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
 SOLD = re.compile(r"\b(?:alquilado|alquilada|reservado|reservada|vendido|vendida|no disponible|suspendido|suspendida)\b", re.I)
 SALE_ONLY = re.compile(r"\b(?:en venta|venta de|se vende)\b", re.I)
@@ -117,7 +117,11 @@ def candidates(session, base, limit=50):
     elif "giacolettopropiedades.com" in host:
         category_paths = ["/Propiedades"]
     elif "estudioheiberosornio.com" in host:
-        category_paths = ["/Casas", "/PHs", "/Departamentos"]
+        category_paths = ["/Alquiler", "/Casas", "/PHs", "/Departamentos"]
+    elif "maccaroni.com.ar" in host:
+        category_paths = ["/propiedades?ope=A", "/propiedades?ope=A&tipo=C", "/propiedades?ope=A&tipo=P", "/propiedades?ope=A&tipo=D"]
+    elif "varcasiapropiedades.com.ar" in host:
+        category_paths = ["/Alquiler", "/Propiedades"]
     for page in [base] + [urljoin(base, path) for path in category_paths]:
         html = fetch(session, page)
         if not html:
@@ -130,6 +134,46 @@ def candidates(session, base, limit=50):
     # Prefer rental detail links before general sale inventory when scanning is capped.
     found = {u for u in found if not urlsplit(u).path.lower().startswith(("/s/", "/propiedades/venta", "/propiedades/alquiler"))}
     return sorted(found, key=lambda u: (0 if "alquiler" in urlsplit(u).path.lower() else 1, u))[:limit]
+
+
+def browser_candidates(base, agency, limit=80):
+    """Load Javascript-rendered first-party listings; no API, no write access."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        raise RuntimeError("Install playwright and chromium to use --browser")
+    host = urlsplit(base).hostname
+    pages = [base]
+    if agency == "Maccaroni":
+        pages = [urljoin(base, p) for p in (
+            "/propiedades?ope=A", "/propiedades?ope=A&tipo=C",
+            "/propiedades?ope=A&tipo=P", "/propiedades?ope=A&tipo=D")]
+    elif agency == "Inmobiliaria Falco":
+        pages = [urljoin(base, "/estado/en-alquiler/"),urljoin(base,"/propiedades/")]
+    elif agency == "Heiber Osornio":
+        pages = [urljoin(base,p) for p in ("/Alquiler","/Casas","/PHs","/Departamentos")]
+    elif agency == "Varcasia Propiedades":
+        pages = [urljoin(base,p) for p in ("/Alquiler","/Propiedades")]
+    links=set()
+    with sync_playwright() as p:
+        browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
+        context=browser.new_context(user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36")
+        page=context.new_page()
+        try:
+            for catalog in pages:
+                try:
+                    response=page.goto(catalog,wait_until="domcontentloaded",timeout=16000)
+                    if not response or response.status>=400:
+                        continue
+                    page.wait_for_timeout(2600 if agency=="Maccaroni" else 900)
+                    for href in page.locator("a[href]").evaluate_all("(nodes)=>nodes.map(n=>n.href)"):
+                        if same_host(urlsplit(href).hostname,host) and PROPERTY_PATH.search(urlsplit(href).path):
+                            links.add(clean_url(href))
+                except Exception as exc:
+                    print(json.dumps({"catalog":catalog,"error":str(exc)[:120]}))
+        finally:
+            browser.close()
+    return sorted(links,key=lambda u:(0 if "alquiler" in u.lower() else 1,u))[:limit]
 
 
 def parse_property(html, url, agency):
@@ -257,6 +301,8 @@ def main():
     ap.add_argument("--source-limit", type=int, default=0, help="test only N configured agencies")
     ap.add_argument("--source-offset", type=int, default=0, help="skip initial agencies in the config")
     ap.add_argument("--emit-json", action="store_true", help="print eligible candidate records during read-only validation")
+    ap.add_argument("--source-name", default="", help="test only the specified agency")
+    ap.add_argument("--browser", action="store_true", help="discover listings using browser-rendered agency catalogues")
     args = ap.parse_args()
     session = requests.Session()
     db_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -266,11 +312,21 @@ def main():
         return 2
     endpoint = db_url + "/rest/v1/radar_caba_listings"
     stats = {"sources": 0, "candidates": 0, "eligible": 0, "inserted": 0, "existing": 0, "errors": 0, "reasons": {}}
-    sources = list(SOURCES.items())[max(0, args.source_offset):]
+    sources = list(SOURCES.items())
+    if args.source_name:
+        sources = [(name,base) for name,base in sources if name.lower()==args.source_name.lower()]
+    else:
+        sources = sources[max(0,args.source_offset):]
     if args.source_limit > 0:
         sources = sources[:args.source_limit]
     for agency, base in sources:
         urls = candidates(session, base, max(1, min(args.max_per_source, 80)))
+        if args.browser and agency in ("Maccaroni","Inmobiliaria Falco","Heiber Osornio","Varcasia Propiedades"):
+            try:
+                browser_urls = browser_candidates(base, agency, max(1,min(args.max_per_source,80)))
+                urls = sorted(set(urls)|set(browser_urls),key=lambda u:(0 if "alquiler" in u.lower() else 1,u))[:max(1,min(args.max_per_source,80))]
+            except Exception as exc:
+                print(json.dumps({"agency":agency,"browser_error":str(exc)[:180]},ensure_ascii=False))
         stats["sources"] += 1
         stats["candidates"] += len(urls)
         print(json.dumps({"agency": agency, "candidates": len(urls)}, ensure_ascii=False))
