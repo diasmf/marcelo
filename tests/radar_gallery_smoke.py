@@ -37,7 +37,7 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         page.on("pageerror",lambda err:errors.append(str(err)))
         page.route("**/api/listings",lambda route:route.fulfill(status=200,content_type="application/json",body=json.dumps(sample)))
         page.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
-        page.locator("#agencyFilter option").last.wait_for(timeout=10000)
+        page.wait_for_function("document.querySelectorAll('#agencyFilter option').length >= 4",timeout=10000)
         assert page.locator("#cards article.card").count()==2, "default shows two qualifying active rentals"
         page.select_option("#agencyFilter",label="Maccaroni")
         assert page.locator("#cards article.card").count()==1, "agency filter should narrow default rentals"
