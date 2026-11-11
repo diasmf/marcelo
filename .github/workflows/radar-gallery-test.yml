@@ -1,0 +1,25 @@
+name: Radar frontend gallery smoke test
+on:
+  push:
+    paths:
+      - 'radar-casas/index.html'
+      - 'tests/radar_gallery_smoke.py'
+      - '.github/workflows/radar-gallery-test.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gallery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser testing
+        run: |
+          pip install playwright==1.65.0
+          python -m playwright install --with-deps chromium
+      - name: Test gallery on desktop browser
+        run: python tests/radar_gallery_smoke.py
