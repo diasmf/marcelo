@@ -50,6 +50,8 @@ SOURCES = {
     "D’Amato Propiedades": "https://www.damatopropiedades.com.ar/",
     "Leonela Cullari Propiedades": "https://www.leonelacullaripropiedades.com/",
     "Magnacca Patelli Propiedades": "https://magnaccapatelli.com/",
+    "Varcasia Propiedades": "https://www.varcasiapropiedades.com.ar/",
+    "Crivez Silvana": "https://www.crivezsilvana-propiedades.com.ar/",
 }
 PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
@@ -103,11 +105,23 @@ def candidates(session, base, limit=50):
             found.update(clean_url(x) for x in links if same_host(urlsplit(x).hostname, host) and PROPERTY_PATH.search(urlsplit(x).path))
         except ET.ParseError:
             pass
-    html = fetch(session, base)
-    if html:
+    # First-party rental catalogue pages: a homepage alone misses many rentals.
+    category_paths = []
+    if "inmofalco.com.ar" in host:
+        category_paths = ["/estado/en-alquiler/"]
+    elif "elaltilloinmuebles.com.ar" in host:
+        category_paths = ["/alquiler/"]
+    elif "giacolettopropiedades.com" in host:
+        category_paths = ["/Propiedades"]
+    elif "estudioheiberosornio.com" in host:
+        category_paths = ["/Casas", "/PHs", "/Departamentos"]
+    for page in [base] + [urljoin(base, path) for path in category_paths]:
+        html = fetch(session, page)
+        if not html:
+            continue
         soup = BeautifulSoup(html, "html.parser")
         for a in soup.select("a[href]"):
-            url = urljoin(base, a["href"])
+            url = urljoin(page, a["href"])
             if same_host(urlsplit(url).hostname, host) and PROPERTY_PATH.search(urlsplit(url).path):
                 found.add(clean_url(url))
     # Prefer rental detail links before general sale inventory when scanning is capped.
