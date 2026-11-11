@@ -146,8 +146,8 @@ def parse_property(html, url, agency):
     # Structured headline figures before the photo gallery are more reliable
     # than numbers in recommended listings later on the page.
     primary = lead[:650]
-    room_label = re.search(r"\\bAmbientes?\\s*:?\\s*(\\d{1,2})\\b", primary, re.I)
-    bed_label = re.search(r"\\bDormitorios?\\s*:?\\s*(\\d{1,2})\\b", primary, re.I)
+    room_label = re.search(r"\bAmbientes?\s*:?\s*(\d{1,2})\b", primary, re.I)
+    bed_label = re.search(r"\bDormitorios?\s*:?\s*(\d{1,2})\b", primary, re.I)
     if room_label and 0 < int(room_label.group(1)) <= 12:
         nrooms = int(room_label.group(1))
     if bed_label and 0 < int(bed_label.group(1)) <= 12:
