@@ -1,0 +1,48 @@
+name: Radar - auditoria das quatro imobiliarias prioritarias
+on:
+  push:
+    paths:
+      - 'radar-casas/collector.py'
+      - 'radar-casas/test_collector.py'
+      - '.github/workflows/radar-priority-sources.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '21 12 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: radar-priority-source-audit
+  cancel-in-progress: false
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        agency: ['Maccaroni', 'Inmobiliaria Falco', 'Heiber Osornio', 'Varcasia Propiedades']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install collector dependencies and Chromium
+        run: |
+          python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2' 'playwright==1.65.0'
+          python -m playwright install --with-deps chromium
+      - name: Run unit tests
+        run: python -m unittest discover -s radar-casas -p 'test_collector.py' -v
+      - name: Inspect agency source including browser-rendered listings
+        env:
+          RADAR_AGENCY: ${{ matrix.agency }}
+        shell: bash
+        run: |
+          mkdir -p audit
+          python radar-casas/collector.py --browser --source-name "$RADAR_AGENCY" --max-per-source 45 --emit-json | tee "audit/${{ strategy.job-index }}.jsonl"
+      - name: Publish audit log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agency-audit-${{ strategy.job-index }}
+          path: audit/
+          retention-days: 14
