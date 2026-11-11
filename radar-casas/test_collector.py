@@ -48,6 +48,14 @@ class AgencyCatalogDiscoveryTests(unittest.TestCase):
         with patch("collector.fetch",side_effect=fake_fetch):
             self.assertIn("https://vitalefeola.com.ar/vitalefeol-881",candidates(None,base))
 
+    def test_argenprop_agency_catalog_rental_links(self):
+        base="https://www.argenprop.com/inmobiliarias/jorge-reale-group/inmuebles"
+        detail="https://www.argenprop.com/casa-en-alquiler-en-liniers-4-ambientes--20261557"
+        def fake_fetch(session,url):
+            return '<a href="'+detail+'">Casa 4 ambientes</a>' if url==base else ""
+        with patch("collector.fetch",side_effect=fake_fetch):
+            self.assertIn(detail,candidates(None,base))
+
     def test_acosta_own_rental_catalog_query(self):
         base="https://www.acostainmobiliaria.com.ar/"
         detail="https://www.acostainmobiliaria.com.ar/casa-en-alquiler-en-mataderos-ficha-ani123"
