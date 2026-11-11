@@ -73,6 +73,23 @@ class PropertyParsingTests(unittest.TestCase):
         self.assertEqual(row["bairro"],"Monte Castro")
         self.assertEqual(len(row["photos"]),2)
 
+    def test_tokkobroker_detail_with_generic_heading(self):
+        html=page("Buscador de propiedades", "En alquiler $ 2.300.000 Pasaje Santa Maria al 1600 Monte Castro, Capital Federal. Detalles de propiedad. Ambientes: 5 Dormitorios: 4 Total construido: 198 m². Casa, patio y terraza.")
+        row,reason=parse_property(html,"https://www.varcasiapropiedades.com.ar/p/12037797-Casa-en-Alquiler-en-Monte-Castro","Varcasia Propiedades")
+        self.assertEqual(reason,"eligible")
+        self.assertEqual(row["beds"],4)
+
+    def test_falco_own_listing_with_generic_heading(self):
+        html=page("Buscador de propiedades", "En alquiler $ 1.550.000 Bacacay 5609 Villa Luro. Sup. total 70 m². Dormitorios 3 Ambientes 4. Casa con terraza.")
+        row,reason=parse_property(html,"https://www.inmofalco.com.ar/propiedad/207797_casa-en-villa-luro/","Inmobiliaria Falco")
+        self.assertEqual(reason,"eligible")
+        self.assertEqual(row["beds"],3)
+
+    def test_bosich_generic_search_page_rejected_even_if_url_looks_like_property(self):
+        html=page("Buscador de propiedades", "Operación alquiler venta. Liniers. Dormitorios 1 2 3 4. $ 2.500.000. Casa 4 ambientes.")
+        row,reason=parse_property(html,"https://www.bosichbienesraices.com.ar/propiedad/123-test","Bosich")
+        self.assertIsNone(row)
+
     def test_invalid_phone_not_bedrooms(self):
         html=page("Departamento en alquiler Liniers", "Liniers. $ 750.000. Tel 216892. 2 ambientes. Superficie 80 m².")
         row,reason=parse_property(html,"https://agency.example.org/propiedad/47","Test Agency")
