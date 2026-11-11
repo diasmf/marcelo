@@ -214,6 +214,15 @@ def parse_property(html, url, agency):
     soup = BeautifulSoup(html, "html.parser")
     h1 = soup.find("h1")
     title = h1.get_text(" ", strip=True) if h1 else ""
+    detail_url = bool(re.search(r"/p/\\d{5,}-|ficha-mco\\d+|/propiedad/\\d+_",urlsplit(url).path,re.I))
+    if detail_url and (not title or re.search(r"^(?:buscador de propiedades|b[uú]squeda de propiedades|propiedades|inmuebles|inicio|home)\\b",title,re.I)):
+        # Many agencies use generic H1 on every page despite unique rental detail URLs.
+        # Derive only the property type and operation from the explicit URL, not site navigation.
+        raw = urlsplit(url).path.rsplit("/",1)[-1]
+        if "/p/" in urlsplit(url).path:
+            raw = re.sub(r"^\\d+-", "",raw)
+        raw = re.sub(r"-ficha-[^-]+$", "",raw,flags=re.I)
+        title = raw.replace("-", " ").replace("_"," ").strip().title()
     for node in soup(["script", "style", "nav", "footer", "header", "noscript"]):
         node.decompose()
     main = soup.select_one("main, article, .property-detail, .single-property, .property-content") or soup.body or soup
