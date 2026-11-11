@@ -32,6 +32,22 @@ class AgencyCatalogDiscoveryTests(unittest.TestCase):
         with patch("collector.fetch",side_effect=fake_fetch):
             self.assertEqual(candidates(None,base),[])
 
+    def test_mg_property_urls_in_own_site(self):
+        base="https://bienesraicesmg.com.ar/"
+        detail="https://bienesraicesmg.com.ar/properties/departamento/villa-devoto/espectacular-4-ambientes/"
+        def fake_fetch(session,url):
+            return '<a href="'+detail+'">Alquiler</a>' if url==base else ""
+        with patch("collector.fetch",side_effect=fake_fetch):
+            self.assertIn(detail.rstrip("/"),candidates(None,base))
+
+    def test_vitale_feola_property_urls_in_own_site(self):
+        base="https://vitalefeola.com.ar/"
+        detail="https://www.vitalefeola.com.ar/vitalefeol-881"
+        def fake_fetch(session,url):
+            return '<a href="https://vitalefeola.com.ar/vitalefeol-881">Propiedad</a>' if url==base else ""
+        with patch("collector.fetch",side_effect=fake_fetch):
+            self.assertIn("https://vitalefeola.com.ar/vitalefeol-881",candidates(None,base))
+
     def test_acosta_own_rental_catalog_query(self):
         base="https://www.acostainmobiliaria.com.ar/"
         detail="https://www.acostainmobiliaria.com.ar/casa-en-alquiler-en-mataderos-ficha-ani123"
