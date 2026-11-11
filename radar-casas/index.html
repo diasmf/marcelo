@@ -183,7 +183,7 @@ function loadLocalGalleries(){return openLocalGalleryDb().then(function(db){if(!
 function addLocalGallery(id,files){
  var chosen=Array.from(files||[]).filter(function(file){return /^image\/(?:jpeg|png|webp)$/i.test(file.type)&&file.size<15*1024*1024}).slice(0,20);
  if(!chosen.length){toast('Selecione fotos JPEG, PNG ou WebP até 15 MB cada.');return}
- if(!localGalleryDb){toast('Este navegador não permite armazenar fotos localmente.');return}
+ if(!localGalleryDb){openLocalGalleryDb().then(function(db){if(db)addLocalGallery(id,chosen);else toast('Este navegador não permite armazenar fotos localmente.')});return}
  var read=localGalleryDb.transaction('albums','readonly').objectStore('albums').get(id);
  read.onsuccess=function(){
   var prior=Array.isArray(read.result)?read.result:[];
