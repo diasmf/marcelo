@@ -60,6 +60,19 @@ class PropertyParsingTests(unittest.TestCase):
         self.assertIsNone(row)
         self.assertEqual(reason,"generic search page")
 
+    def test_commercial_only_bener_house_rejected(self):
+        html=page("Casa de 4 ambientes en Alquiler en Monte Castro, Lascano 5055", "USO COMERCIAL OFICINAS Y DEPOSITO. $ 1.800.000. Ambientes 4. Dormitorios 3. Sup. total 220 m².")
+        row,reason=parse_property(html,"https://www.bener.com.ar/casa-en-alquiler-en-monte-castro-ficha-bnr-0016","Bener")
+        self.assertIsNone(row)
+        self.assertEqual(reason,"commercial-only use")
+
+    def test_real_property_gallery_and_neighborhood(self):
+        html='<html><body><main><h1>Casa 4 ambientes en alquiler Monte Castro</h1><p>Lascano 5055 $ 1.800.000. Dormitorios 3. Sup. total 220 m². Contacto oficina Villa Devoto</p><img src="https://example.com/fotos/casa1.webp"><img src="https://example.com/fotos/casa2.jpg"></main></body></html>'
+        row,reason=parse_property(html,"https://agency.example.org/propiedad/50","Test Agency")
+        self.assertEqual(reason,"eligible")
+        self.assertEqual(row["bairro"],"Monte Castro")
+        self.assertEqual(len(row["photos"]),2)
+
     def test_invalid_phone_not_bedrooms(self):
         html=page("Departamento en alquiler Liniers", "Liniers. $ 750.000. Tel 216892. 2 ambientes. Superficie 80 m².")
         row,reason=parse_property(html,"https://agency.example.org/propiedad/47","Test Agency")
