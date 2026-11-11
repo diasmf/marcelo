@@ -35,6 +35,21 @@ SOURCES = {
     "Jorge Reale": "https://www.jorgereale.com/",
     "MG Bienes Raíces": "https://bienesraicesmg.com.ar/",
     "Vitale Feola Propiedades": "https://vitalefeola.com.ar/",
+    "Acosta": "https://www.acostainmobiliaria.com.ar/",
+    "Borrajo": "https://www.borrajopropiedades.com.ar/",
+    "Bosich": "https://www.bosichbienesraices.com.ar/",
+    "CLOM": "https://www.clompropiedades.com.ar/",
+    "Florencio González": "https://florenciogonzalez.com.ar/",
+    "Gabriel Figueroa": "https://gabrielfigueroa.com.ar/",
+    "Giacoletto": "https://www.giacolettopropiedades.com/",
+    "Nolé Propiedades": "https://www.nolepropiedades.com.ar/",
+    "Varela Villalba": "https://www.varelavillalba.com.ar/",
+    "Jorge Parajon Propiedades": "https://www.parajonpropiedades.com.ar/",
+    "Braña Inmobiliaria": "https://xn--abraa-rta.com.ar/",
+    "Pallarols Santander Propiedades": "https://www.pallarols-santander.com/",
+    "D’Amato Propiedades": "https://www.damatopropiedades.com.ar/",
+    "Leonela Cullari Propiedades": "https://www.leonelacullaripropiedades.com/",
+    "Magnacca Patelli Propiedades": "https://magnaccapatelli.com/",
 }
 PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
