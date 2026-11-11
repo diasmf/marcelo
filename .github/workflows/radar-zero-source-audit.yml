@@ -6,6 +6,8 @@ on:
       - 'radar-casas/test_collector.py'
       - '.github/workflows/radar-zero-source-audit.yml'
   workflow_dispatch:
+  schedule:
+    - cron: '47 11 * * *'
 permissions:
   contents: read
 concurrency:
