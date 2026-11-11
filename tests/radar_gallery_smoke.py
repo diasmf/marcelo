@@ -55,6 +55,16 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         assert page.locator("#minRooms").input_value()=="4"
         assert page.locator("#minArea").input_value()=="60"
         assert page.locator("#cards article.card").count()==1
+        assert page.locator("#mainPreset").get_attribute("aria-pressed")=="true"
+        page.click("#mainPreset")
+        assert page.locator("#mainPreset").get_attribute("aria-pressed")=="false"
+        assert page.locator("#minBeds").input_value()==""
+        assert page.locator("#minRooms").input_value()==""
+        assert page.locator("#minArea").input_value()==""
+        assert page.locator("#cards article.card").count()==2, "toggle off must remove room and area restrictions without showing inactive"
+        page.click("#mainPreset")
+        assert page.locator("#mainPreset").get_attribute("aria-pressed")=="true"
+        assert page.locator("#cards article.card").count()==1, "toggle on restores the standard criteria"
         page.click("#showAllPreset")
         assert page.locator("#cards article.card").count()==3
         assert page.locator("#diagnosticMode").is_checked()
