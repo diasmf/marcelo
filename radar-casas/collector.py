@@ -129,7 +129,9 @@ def parse_property(html, url, agency):
     # Reject obvious land/commercial inventories even if a recommended property is residential.
     if re.search(r"\b(?:lotes?|terrenos?|local(?:\s+comercial)?|galp[oó]n|dep[oó]sito|cochera\s+en|oficina)\b", title + " " + text[:280], re.I) and not re.search(r"\b(?:casa|departamento|\bph\b|d[uú]plex|tr[ií]plex)\b", title, re.I):
         return None, "not residential"
-    if not title or not RENT.search(lead):
+    if not title or re.search(r"^(?:buscador de propiedades|b[uú]squeda de propiedades|propiedades|inmuebles|inicio|home)\\b", title, re.I):
+        return None, "generic search page"
+    if not RENT.search(lead):
         return None, "not rental"
     if SALE_ONLY.search(title + " " + text[:200]) and not RENT.search(title):
         return None, "sale"
