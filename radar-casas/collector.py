@@ -133,6 +133,10 @@ def candidates(session, base, limit=50):
     elif "acostainmobiliaria.com.ar" in host:
         category_paths = ["/propiedades?ope=A", "/propiedades?ope=A&tipo=C",
                           "/propiedades?ope=A&tipo=D", "/propiedades?ope=A&tipo=P"]
+    elif "xn--abraa-rta.com.ar" in host:
+        category_paths = ["/propiedades"]
+    elif "magnaccapatelli.com" in host:
+        category_paths = ["/alquileres.php", "/alquiler.php"]
     elif "bienesraicesmg.com.ar" in host:
         category_paths = ["/properties", "/propiedades"]
     elif "vitalefeola.com.ar" in host:
@@ -175,6 +179,10 @@ def browser_candidates(base, agency, limit=80):
             "/propiedades?ope=A&tipo=D", "/propiedades?ope=A&tipo=P")]
     elif agency in ("MG Bienes Raíces", "Vitale Feola Propiedades"):
         pages = [base, urljoin(base, "/propiedades"), urljoin(base, "/properties")]
+    elif agency=="Braña Inmobiliaria":
+        pages=[base,urljoin(base,"/propiedades")]
+    elif agency=="Magnacca Patelli Propiedades":
+        pages=[base,urljoin(base,"/alquileres.php"),urljoin(base,"/alquiler.php")]
     links=set()
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -385,7 +393,7 @@ def main():
         sources = sources[:args.source_limit]
     for agency, base in sources:
         urls = candidates(session, base, max(1, min(args.max_per_source, 80)))
-        if args.browser and agency in ("Maccaroni","Inmobiliaria Falco","Heiber Osornio","Varcasia Propiedades","Acosta","MG Bienes Raíces","Vitale Feola Propiedades"):
+        if args.browser and agency in ("Maccaroni","Inmobiliaria Falco","Heiber Osornio","Varcasia Propiedades","Acosta","MG Bienes Raíces","Vitale Feola Propiedades","Braña Inmobiliaria","Magnacca Patelli Propiedades"):
             try:
                 browser_urls = browser_candidates(base, agency, max(1,min(args.max_per_source,80)))
                 urls = sorted(set(urls)|set(browser_urls),key=lambda u:(0 if "alquiler" in u.lower() else 1,u))[:max(1,min(args.max_per_source,80))]
