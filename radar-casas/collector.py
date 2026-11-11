@@ -196,7 +196,7 @@ def parse_property(html, url, agency):
         raw = img.get("data-src") or img.get("src") or ""
         candidate = urljoin(url, raw)
         path = urlsplit(candidate).path.lower()
-        if (candidate.startswith("https://") and re.search(r"\\.(?:jpe?g|png|webp)$", path)
+        if (candidate.startswith("https://") and re.search(r"\.(?:jpe?g|png|webp)$", path)
                 and not re.search(r"logo|avatar|icon|banner|placeholder|tracking|profile", path)
                 and candidate not in images):
             images.append(candidate)
