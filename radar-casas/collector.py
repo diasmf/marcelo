@@ -392,7 +392,7 @@ def main():
             except Exception as exc:
                 print(json.dumps({"agency":agency,"browser_error":str(exc)[:180]},ensure_ascii=False))
         rendered={}
-        if args.browser and agency=="Maccaroni" and urls:
+        if args.browser and agency in ("Maccaroni","Acosta","MG Bienes Raíces") and urls:
             try:
                 rendered=browser_property_html(urls)
             except Exception as exc:
@@ -409,6 +409,8 @@ def main():
             html = rendered.get(url) or fetch(session,url)
             if not html:
                 stats["errors"] += 1
+                if urls.index(url)<2:
+                    print(json.dumps({"sample_url":url,"reason":"detail fetch failed"},ensure_ascii=False))
                 continue
             row, reason = parse_property(html, url, agency)
             if not row and reason=="generic search page" and rendered.get(url):
