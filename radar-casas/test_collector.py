@@ -1,8 +1,45 @@
 import unittest
-from collector import parse_property
+from collector import parse_property, candidates
+from unittest.mock import patch
 
 def page(title, text):
     return '<html><head><meta property="og:image" content="https://images.example.org/property1.jpg"></head><body><main><h1>'+title+'</h1><p>'+text+'</p></main></body></html>'
+
+class AgencyCatalogDiscoveryTests(unittest.TestCase):
+    def test_tokko_rental_catalogs_not_only_homepages(self):
+        samples = [
+            ("https://www.giacolettopropiedades.com/",
+             "https://www.giacolettopropiedades.com/p/7913743-PH-en-Alquiler-en-Mataderos-Carhue-al-2200"),
+            ("https://www.borrajopropiedades.com.ar/",
+             "https://www.borrajopropiedades.com.ar/p/8608637-Departamento-en-Alquiler-en-Villa-Luro"),
+            ("https://www.varelavillalba.com.ar/",
+             "https://www.varelavillalba.com.ar/p/10476147-Departamento-en-Alquiler-en-Floresta"),
+        ]
+        for base,detail in samples:
+            with self.subTest(base=base):
+                def fake_fetch(session,url):
+                    if url==base+"Alquiler":
+                        return '<html><body><a href="'+detail+'">Ver propiedad</a></body></html>'
+                    return ""
+                with patch("collector.fetch",side_effect=fake_fetch):
+                    found=candidates(None,base,limit=20)
+                self.assertIn(detail,found)
+
+    def test_property_links_reject_generic_category_page(self):
+        base="https://www.giacolettopropiedades.com/"
+        def fake_fetch(session,url):
+            return '<a href="/Propiedades">Ver todos</a>' if url==base+"Alquiler" else ""
+        with patch("collector.fetch",side_effect=fake_fetch):
+            self.assertEqual(candidates(None,base),[])
+
+    def test_acosta_own_rental_catalog_query(self):
+        base="https://www.acostainmobiliaria.com.ar/"
+        detail="https://www.acostainmobiliaria.com.ar/casa-en-alquiler-en-mataderos-ficha-ani123"
+        def fake_fetch(session,url):
+            return '<a href="'+detail+'">Casa</a>' if url==base+"propiedades?ope=A" else ""
+        with patch("collector.fetch",side_effect=fake_fetch):
+            self.assertIn(detail,candidates(None,base))
+
 
 class PropertyParsingTests(unittest.TestCase):
     def test_eligible_four_ambientes(self):
