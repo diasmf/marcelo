@@ -176,6 +176,40 @@ def browser_candidates(base, agency, limit=80):
     return sorted(links,key=lambda u:(0 if "alquiler" in u.lower() else 1,u))[:limit]
 
 
+def browser_property_html(urls):
+    """Read listing text rendered inside a site's same-window and iframe documents."""
+    from playwright.sync_api import sync_playwright
+    results={}
+    with sync_playwright() as p:
+        browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
+        context=browser.new_context(user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36")
+        page=context.new_page()
+        try:
+            for url in urls:
+                try:
+                    response=page.goto(url,wait_until="domcontentloaded",timeout=15000)
+                    if not response or response.status>=400:
+                        continue
+                    page.wait_for_timeout(1100)
+                    contents=[page.content()]
+                    for frame in page.frames:
+                        if frame==page.main_frame or frame.url=="about:blank":
+                            continue
+                        try:
+                            contents.append(frame.content())
+                        except Exception:
+                            pass
+                    # Property content can be nested in a Xintel/Amaira iframe.
+                    # Keep the main document too for canonical address and photos.
+                    content=max(contents,key=lambda html: len(BeautifulSoup(html,"html.parser").get_text(" ",strip=True)))
+                    results[url]=content
+                except Exception as exc:
+                    print(json.dumps({"property_url":url,"browser_property_error":str(exc)[:110]}))
+        finally:
+            browser.close()
+    return results
+
+
 def parse_property(html, url, agency):
     soup = BeautifulSoup(html, "html.parser")
     h1 = soup.find("h1")
@@ -327,15 +361,23 @@ def main():
                 urls = sorted(set(urls)|set(browser_urls),key=lambda u:(0 if "alquiler" in u.lower() else 1,u))[:max(1,min(args.max_per_source,80))]
             except Exception as exc:
                 print(json.dumps({"agency":agency,"browser_error":str(exc)[:180]},ensure_ascii=False))
+        rendered={}
+        if args.browser and agency=="Maccaroni" and urls:
+            try:
+                rendered=browser_property_html(urls)
+            except Exception as exc:
+                print(json.dumps({"agency":agency,"browser_page_error":str(exc)[:150]}))
         stats["sources"] += 1
         stats["candidates"] += len(urls)
         print(json.dumps({"agency": agency, "candidates": len(urls)}, ensure_ascii=False))
         for url in urls:
-            html = fetch(session, url)
+            html = rendered.get(url) or fetch(session,url)
             if not html:
                 stats["errors"] += 1
                 continue
             row, reason = parse_property(html, url, agency)
+            if not row and reason=="generic search page" and rendered.get(url):
+                print(json.dumps({"property_url":url,"rendered_title":BeautifulSoup(html,"html.parser").title.get_text(" ",strip=True)[:100] if BeautifulSoup(html,"html.parser").title else "","rendered_chars":len(html)}))
             if not row:
                 stats["reasons"][reason] = stats["reasons"].get(reason, 0) + 1
                 if urls.index(url) < 2:
