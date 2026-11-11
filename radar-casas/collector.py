@@ -354,7 +354,7 @@ def main():
         print("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required", file=sys.stderr)
         return 2
     endpoint = db_url + "/rest/v1/radar_caba_listings"
-    stats = {"sources": 0, "candidates": 0, "eligible": 0, "inserted": 0, "existing": 0, "errors": 0, "reasons": {}}
+    stats = {"sources": 0, "candidates": 0, "eligible": 0, "inserted": 0, "existing": 0, "errors": 0, "reasons": {}, "source_status": {}}
     sources = list(SOURCES.items())
     if args.source_name:
         sources = [(name,base) for name,base in sources if name.lower()==args.source_name.lower()]
@@ -378,7 +378,12 @@ def main():
                 print(json.dumps({"agency":agency,"browser_page_error":str(exc)[:150]}))
         stats["sources"] += 1
         stats["candidates"] += len(urls)
-        print(json.dumps({"agency": agency, "candidates": len(urls)}, ensure_ascii=False))
+        if urls:
+            status = "candidate_links_found"
+        else:
+            status = "reachable_no_property_links" if fetch(session,base) else "source_unreachable"
+        stats["source_status"][agency] = status
+        print(json.dumps({"agency": agency, "candidates": len(urls), "source_status": status}, ensure_ascii=False))
         for url in urls:
             html = rendered.get(url) or fetch(session,url)
             if not html:
