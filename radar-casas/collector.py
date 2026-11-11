@@ -36,7 +36,7 @@ SOURCES = {
     "MG Bienes Raíces": "https://bienesraicesmg.com.ar/",
     "Vitale Feola Propiedades": "https://vitalefeola.com.ar/",
 }
-PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+)", re.I)
+PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
 SOLD = re.compile(r"\b(?:alquilado|alquilada|reservado|reservada|vendido|vendida|no disponible|suspendido|suspendida)\b", re.I)
 SALE_ONLY = re.compile(r"\b(?:en venta|venta de|se vende)\b", re.I)
@@ -103,11 +103,11 @@ def parse_property(html, url, agency):
     main = soup.select_one("main, article, .property-detail, .single-property, .property-content") or soup.body or soup
     text = " ".join(main.stripped_strings)
     text = re.sub(r"\s+", " ", text)[:12000]
-    lead = (title + " " + text[:3500]).strip()
+    lead = (title + " " + text[:1600]).strip()
     if not title or not RENT.search(lead):
         return None, "not rental"
     # A rental listing must not explicitly be marked as rented, reserved or removed.
-    if SOLD.search(title + " " + text[:800]):
+    if SOLD.search(title + " " + text[:600]):
         return None, "rented/reserved"
     if SALE_ONLY.search(title) and not RENT.search(title):
         return None, "sale"
