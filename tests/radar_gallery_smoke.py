@@ -31,7 +31,9 @@ with socketserver.TCPServer(("127.0.0.1",0),Silent) as server:
   page.on("pageerror",lambda err:errors.append(str(err)))
   page.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
   page.locator('[data-addlocal="radar-gallery-test"]').wait_for(timeout=10000)
-  page.locator('#localGalleryPicker').set_input_files([
+  with page.expect_file_chooser() as chooser:
+   page.locator('[data-addlocal="radar-gallery-test"]').click()
+  chooser.value.set_files([
    {"name":"interior1.png","mimeType":"image/png","buffer":png},
    {"name":"interior2.png","mimeType":"image/png","buffer":png},
   ])
