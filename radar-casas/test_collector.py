@@ -54,6 +54,12 @@ class PropertyParsingTests(unittest.TestCase):
         self.assertIsNone(row)
         self.assertEqual(reason,"not 3 dormitorios / 4 ambientes")
 
+    def test_generic_search_navigation_is_not_a_rental(self):
+        html=page("Buscador de propiedades", "Inicio Contacto Llámenos 4643-0108 Liniers, Capital Federal. Operación Venta Alquiler. Dormitorios 1 2 3 4 5 6. $ 2.500.000. Casa PH Departamentos. Sup. total 140 m².")
+        row,reason=parse_property(html,"https://agency.example.org/propiedad/48","Test Agency")
+        self.assertIsNone(row)
+        self.assertEqual(reason,"generic search page")
+
     def test_invalid_phone_not_bedrooms(self):
         html=page("Departamento en alquiler Liniers", "Liniers. $ 750.000. Tel 216892. 2 ambientes. Superficie 80 m².")
         row,reason=parse_property(html,"https://agency.example.org/propiedad/47","Test Agency")
