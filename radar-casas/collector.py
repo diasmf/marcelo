@@ -107,6 +107,7 @@ def candidates(session, base, limit=50):
             if urlsplit(url).hostname == host and PROPERTY_PATH.search(urlsplit(url).path):
                 found.add(clean_url(url))
     # Prefer rental detail links before general sale inventory when scanning is capped.
+    found = {u for u in found if not urlsplit(u).path.lower().startswith(("/s/", "/propiedades/venta", "/propiedades/alquiler"))}
     return sorted(found, key=lambda u: (0 if "alquiler" in urlsplit(u).path.lower() else 1, u))[:limit]
 
 
@@ -142,6 +143,15 @@ def parse_property(html, url, agency):
     beds = [int(m.group(1)) for m in BEDS.finditer(lead) if 1 <= int(m.group(1)) <= 12]
     nrooms = max(rooms, default=0)
     nbeds = max(beds, default=0)
+    # Structured headline figures before the photo gallery are more reliable
+    # than numbers in recommended listings later on the page.
+    primary = lead[:650]
+    room_label = re.search(r"\\bAmbientes?\\s*:?\\s*(\\d{1,2})\\b", primary, re.I)
+    bed_label = re.search(r"\\bDormitorios?\\s*:?\\s*(\\d{1,2})\\b", primary, re.I)
+    if room_label and 0 < int(room_label.group(1)) <= 12:
+        nrooms = int(room_label.group(1))
+    if bed_label and 0 < int(bed_label.group(1)) <= 12:
+        nbeds = int(bed_label.group(1))
     if nrooms < 4 and nbeds < 3:
         return None, "not 3 dormitorios / 4 ambientes"
     areas = [float(m.group(1).replace(",", ".")) for m in AREA.finditer(lead)]
