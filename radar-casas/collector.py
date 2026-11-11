@@ -122,13 +122,13 @@ def parse_property(html, url, agency):
     lead = (title + " " + text[:1600]).strip()
     # Generic navigation sometimes says 'alquiler' even on a SALE listing.
     # Reject obvious land/commercial inventories even if a recommended property is residential.
-    if re.search(r"\\b(?:lote|terreno|local(?:\\s+comercial)?|galp[oó]n|dep[oó]sito|cochera\\s+en|oficina)\\b", title + " " + text[:280], re.I) and not re.search(r"\\b(?:casa|departamento|\\bph\\b|d[uú]plex|tr[ií]plex)\\b", title, re.I):
+    if re.search(r"\b(?:lote|terreno|local(?:\s+comercial)?|galp[oó]n|dep[oó]sito|cochera\s+en|oficina)\b", title + " " + text[:280], re.I) and not re.search(r"\b(?:casa|departamento|\bph\b|d[uú]plex|tr[ií]plex)\b", title, re.I):
         return None, "not residential"
     if not title or not RENT.search(lead):
         return None, "not rental"
     if SALE_ONLY.search(title + " " + text[:200]) and not RENT.search(title):
         return None, "sale"
-    if re.search(r"\\b(?:USD|U\\$S|U\\$D)\\s*[\\d.,]+", title + " " + text[:300], re.I) and not re.search(r"\\b(?:ARS|alquiler\\s+mensual)\\b", title + " " + text[:300], re.I):
+    if re.search(r"\b(?:USD|U\$S|U\$D)\s*[\d.,]+", title + " " + text[:300], re.I) and not re.search(r"\b(?:ARS|alquiler\s+mensual)\b", title + " " + text[:300], re.I):
         return None, "sale price in USD"
     # A rental listing must not explicitly be marked as rented, reserved or removed.
     if SOLD.search(title + " " + text[:600]):
