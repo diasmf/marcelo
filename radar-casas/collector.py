@@ -221,6 +221,7 @@ def main():
     ap.add_argument("--max-per-source", type=int, default=40)
     ap.add_argument("--source-limit", type=int, default=0, help="test only N configured agencies")
     ap.add_argument("--source-offset", type=int, default=0, help="skip initial agencies in the config")
+    ap.add_argument("--emit-json", action="store_true", help="print eligible candidate records during read-only validation")
     args = ap.parse_args()
     session = requests.Session()
     db_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -260,7 +261,7 @@ def main():
                         continue
                 else:
                     action = "dry-run"
-                print(json.dumps({"url": url, "rooms": row["beds"], "price": row["price"], "result": action}, ensure_ascii=False))
+                print(json.dumps({"candidate": row, "result": action} if args.emit_json else {"url": url, "rooms": row["beds"], "price": row["price"], "result": action}, ensure_ascii=False))
             time.sleep(0.2)
         time.sleep(0.3)
     print(json.dumps({"summary": stats}, ensure_ascii=False))
