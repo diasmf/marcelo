@@ -1,57 +1,56 @@
-"""Browser smoke test for Maccaroni local-gallery feature, including persistence."""
-import base64, json, threading, http.server, socketserver
+"""Regression smoke test for Radar agency filter and diagnostic mode (no upload controls)."""
+import json
+import threading
+import http.server
+import socketserver
 from playwright.sync_api import sync_playwright
 
-sample = {
- "listings":[{"id":"radar-gallery-test","mode":"aluguel","bairro":"Mataderos",
- "address":"Mataderos, CABA","tipo":"Casa","price":1800000,"cur":"ARS",
- "beds":3,"area":110,"patio":True,"garage":False,
- "photo":"https://images.example.com/first.png",
- "photos":["https://images.example.com/first.png"],
- "agency":"Maccaroni",
- "url":"https://www.maccaroni.com.ar/casa-en-alquiler-en-mataderos-ficha-mco3934",
- "detail":"Casa en alquiler, Mataderos", "tag":"Novo no Radar",
- "listing_status":"pending","discovered_at":"2026-11-10"}],
- "agencies":[]
+def record(id,agency,beds,area,status="pending",mode="aluguel"):
+    return {
+        "id":id,"mode":mode,"bairro":"Liniers","address":id,"tipo":"Casa","price":1200000,
+        "cur":"ARS","beds":beds,"area":area,"patio":False,"garage":False,
+        "photo":None,"photos":[],"agency":agency,"url":"https://example.org/propiedad/"+id,
+        "detail":"Casa en alquiler, Liniers, 2 ambientes" if beds==1 else "Casa 4 ambientes en alquiler",
+        "listing_status":status,"discovered_at":"2026-11-11"
+    }
+
+sample={
+ "listings":[record("casa-a","Maccaroni",3,110),
+             record("casa-b","Maccaroni",1,45),
+             record("casa-inativa","Maccaroni",3,120,"inactive"),
+             record("casa-c","Bosich",3,115)],
+ "agencies":[{"name":"Maccaroni","bairro":"Liniers","url":"https://maccaroni.com.ar/"},
+             {"name":"Bosich","bairro":"Liniers","url":"https://bosichbienesraices.com.ar/"},
+             {"name":"Zero Testes","bairro":"Liniers","url":"https://example.org/"}]
 }
-png=base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==")
 
-class Silent(http.server.SimpleHTTPRequestHandler):
- def log_message(self,*args): pass
+class Quiet(http.server.SimpleHTTPRequestHandler):
+    def log_message(self,*args): pass
 
-with socketserver.TCPServer(("127.0.0.1",0),Silent) as server:
- host=f"http://127.0.0.1:{server.server_address[1]}"
- threading.Thread(target=server.serve_forever,daemon=True).start()
- with sync_playwright() as p:
-  browser=p.chromium.launch(headless=True)
-  page=browser.new_page()
-  page.route("**/api/listings",lambda r:r.fulfill(status=200,content_type="application/json",body=json.dumps(sample)))
-  page.route("https://images.example.com/first.png",lambda r:r.fulfill(status=200,content_type="image/png",body=png))
-  errors=[]
-  page.on("pageerror",lambda err:errors.append(str(err)))
-  page.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
-  page.locator('[data-addlocal="radar-gallery-test"]').wait_for(timeout=10000)
-  with page.expect_file_chooser() as chooser:
-   page.locator('[data-addlocal="radar-gallery-test"]').click()
-  chooser.value.set_files([
-   {"name":"interior1.png","mimeType":"image/png","buffer":png},
-   {"name":"interior2.png","mimeType":"image/png","buffer":png},
-  ])
-  page.wait_for_timeout(1400)
-  print("GALLERY_DEBUG",json.dumps({
-   "notice":page.locator("#toast").inner_text(),
-   "buttons":page.locator('[data-addlocal]').count(),
-   "count":page.locator('[data-count="radar-gallery-test"]').count(),
-   "pageerrors":errors
-  }),flush=True)
-  page.locator('[data-count="radar-gallery-test"]').wait_for(timeout=10000)
-  assert page.locator('[data-count="radar-gallery-test"]').inner_text()=="1 / 3"
-  page.locator('[data-advance="1"][data-id="radar-gallery-test"]').click()
-  assert page.locator('[data-count="radar-gallery-test"]').inner_text()=="2 / 3"
-  page.reload(wait_until="domcontentloaded")
-  page.locator('[data-count="radar-gallery-test"]').wait_for(timeout=10000)
-  assert page.locator('[data-count="radar-gallery-test"]').inner_text()=="1 / 3"
-  assert not errors, errors
-  browser.close()
-  print("GALLERY_SMOKE_OK: upload, arrow navigation, indexedDB persistence")
- server.shutdown()
+with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
+    host=f"http://127.0.0.1:{server.server_address[1]}"
+    threading.Thread(target=server.serve_forever,daemon=True).start()
+    with sync_playwright() as p:
+        browser=p.chromium.launch(headless=True)
+        page=browser.new_page(viewport={"width":1200,"height":860})
+        errors=[]
+        page.on("pageerror",lambda err:errors.append(str(err)))
+        page.route("**/api/listings",lambda route:route.fulfill(status=200,content_type="application/json",body=json.dumps(sample)))
+        page.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
+        page.locator("#agencyFilter option").last.wait_for(timeout=10000)
+        assert page.locator("#cards article.card").count()==2, "default shows two qualifying active rentals"
+        page.select_option("#agencyFilter",label="Maccaroni")
+        assert page.locator("#cards article.card").count()==1, "agency filter should narrow default rentals"
+        page.locator("#diagnosticMode").check()
+        assert page.locator("#cards article.card").count()==3, "diagnostic should show both invalid and inactive properties"
+        assert "INATIVO" in page.locator("#cards").inner_text(), "inactive must be marked"
+        page.locator("#diagnosticMode").uncheck()
+        assert page.locator("#cards article.card").count()==1
+        page.locator('[data-tab="agencies"]').click()
+        page.locator('[data-testagency="Zero Testes"]').click()
+        assert page.locator("#cards article.card").count()==0, "zero-listing source must show no results"
+        assert page.locator("#diagnosticMode").is_checked()
+        assert not errors, errors
+        print("RADAR_FILTER_SMOKE_OK: agency, diagnostic, inactive warnings, zero listings")
+        browser.close()
+    server.shutdown()
