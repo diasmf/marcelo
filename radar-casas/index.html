@@ -329,7 +329,7 @@ function render(){
    var name=canonicalAgency(a.name),listings=state.listings.filter(function(x){return canonicalAgency(x.agency)===name});
    var recent=listings.filter(function(x){return x.listing_status!=='inactive'});
    var matching=recent.filter(function(x){var b=validBedrooms(x),rooms=roomsFromDescription(x);var area=x.area==null||Number(x.area)<=0||Number(x.area)>=60;return ((b!==null&&b>=3)||(rooms!==null&&rooms>=4))&&area});
-   return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(a.bairro)+'</small><small>'+listings.length+' fichas no banco · '+recent.length+' não inativas · '+matching.length+' com critérios</small><button data-testagency="'+esc(name)+'" type="button">Testar anúncios desta imobiliária</button><a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Abrir anúncios na fonte ↗</a></div>'
+   return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(a.bairro)+'</small><small>'+listings.length+' fichas no banco · '+recent.length+' não inativas · '+matching.length+' com critérios</small>'+(listings.length===0?'<small style="color:#a15727">⚠ Coleta não comprovada: zero fichas não significa ausência de imóveis.</small>':'')+'<button data-testagency="'+esc(name)+'" type="button">Testar anúncios desta imobiliária</button><a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Abrir anúncios na fonte ↗</a></div>'
   }).join('');
   return;
  }
