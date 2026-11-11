@@ -56,7 +56,7 @@ SOURCES = {
     "Todoroff Propiedades": "https://www.argenprop.com/ph-en-venta-en-mataderos-3-ambientes--19375060",
     "Florencio Gonzalez Inmuebles": "https://florenciogonzalez.com.ar/",
 }
-PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|(?:casa|ph|departamento)-en-alquiler-en-[^/?#]+)", re.I)
+PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|properties/(?:departamento|casa|ph)/[^/?#]+/[^/?#]+|vitalefeol-\d+|(?:casa|ph|departamento)-en-alquiler-en-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
 SOLD = re.compile(r"\b(?:alquilado|alquilada|reservado|reservada|vendido|vendida|no disponible|suspendido|suspendida)\b", re.I)
 SALE_ONLY = re.compile(r"\b(?:en venta|venta de|se vende)\b", re.I)
@@ -133,6 +133,10 @@ def candidates(session, base, limit=50):
     elif "acostainmobiliaria.com.ar" in host:
         category_paths = ["/propiedades?ope=A", "/propiedades?ope=A&tipo=C",
                           "/propiedades?ope=A&tipo=D", "/propiedades?ope=A&tipo=P"]
+    elif "bienesraicesmg.com.ar" in host:
+        category_paths = ["/properties", "/propiedades"]
+    elif "vitalefeola.com.ar" in host:
+        category_paths = ["/propiedades", "/index"]
     for page in [base] + [urljoin(base, path) for path in category_paths]:
         html = fetch(session, page)
         if not html:
