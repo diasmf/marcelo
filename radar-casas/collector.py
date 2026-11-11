@@ -32,7 +32,7 @@ SOURCES = {
     "Bener": "https://www.bener.com.ar/",
     "AMI Propiedades": "https://amipropiedades.com.ar/",
     "Furia Propiedades": "https://www.furiapropiedades.com.ar/",
-    "Jorge Reale": "https://www.jorgereale.com/",
+    "Jorge Reale": "https://www.argenprop.com/inmobiliarias/jorge-reale-group/inmuebles",
     "MG Bienes Raíces": "https://bienesraicesmg.com.ar/",
     "Vitale Feola Propiedades": "https://vitalefeola.com.ar/",
     "Acosta": "https://www.acostainmobiliaria.com.ar/",
@@ -53,10 +53,10 @@ SOURCES = {
     "Varcasia Propiedades": "https://www.varcasiapropiedades.com.ar/",
     "Crivez Silvana": "https://www.crivezsilvana-propiedades.com.ar/",
     "Fedele Inmobiliaria": "https://www.argenprop.com/inmobiliarias/fedele-inmobiliaria/ph",
-    "Todoroff Propiedades": "https://www.argenprop.com/ph-en-venta-en-mataderos-3-ambientes--19375060",
+    "Todoroff Propiedades": "https://www.argenprop.com/inmobiliarias/todoroff-propiedades/inmuebles/mataderos",
     "Florencio Gonzalez Inmuebles": "https://florenciogonzalez.com.ar/",
 }
-PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|properties/(?:departamento|casa|ph)/[^/?#]+/[^/?#]+|vitalefeol-\d+|(?:casa|ph|departamento)-en-alquiler-en-[^/?#]+)", re.I)
+PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|properties/(?:departamento|casa|ph)/[^/?#]+/[^/?#]+|vitalefeol-\d+|(?:casa|ph|departamento)-en-(?:alquiler|venta)-en-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
 SOLD = re.compile(r"\b(?:alquilado|alquilada|reservado|reservada|vendido|vendida|no disponible|suspendido|suspendida)\b", re.I)
 SALE_ONLY = re.compile(r"\b(?:en venta|venta de|se vende)\b", re.I)
