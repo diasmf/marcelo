@@ -106,7 +106,8 @@ def candidates(session, base, limit=50):
             url = urljoin(base, a["href"])
             if urlsplit(url).hostname == host and PROPERTY_PATH.search(urlsplit(url).path):
                 found.add(clean_url(url))
-    return sorted(found)[:limit]
+    # Prefer rental detail links before general sale inventory when scanning is capped.
+    return sorted(found, key=lambda u: (0 if "alquiler" in urlsplit(u).path.lower() else 1, u))[:limit]
 
 
 def parse_property(html, url, agency):
@@ -173,6 +174,11 @@ def save(session, row, endpoint, key):
     check = session.get(endpoint, params={"select": "id", "url": "eq." + row["url"], "limit": "1"}, headers=headers, timeout=15)
     check.raise_for_status()
     if check.json():
+        return "existing"
+    alternate = row["url"] + "/" if not row["url"].endswith("/") else row["url"].rstrip("/")
+    check_alt = session.get(endpoint, params={"select": "id", "url": "eq." + alternate, "limit": "1"}, headers=headers, timeout=15)
+    check_alt.raise_for_status()
+    if check_alt.json():
         return "existing"
     resp = session.post(endpoint, json=row, headers=headers, timeout=15)
     resp.raise_for_status()
