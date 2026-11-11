@@ -289,7 +289,7 @@ function render(){
  var showSimilar=el('showSimilar').checked;
  var selectedAgency=el('agencyFilter').value;
  var matchesAgency=function(x){return !selectedAgency||canonicalAgency(x.agency)===selectedAgency};
- var eligible=function(x){var knownArea=x.area!==null&&x.area!==undefined&&x.area!==''&&Number(x.area)>0;return (diagnostic||meetsRoomsCriterion(x))&&(diagnostic||x.mode!=='aluguel'||!knownArea||Number(x.area)>=60)&&(!recentOnly||publishedRecently(x))};
+ var eligible=function(x){var knownArea=x.area!==null&&x.area!==undefined&&x.area!==''&&Number(x.area)>0;return (diagnostic||x.listing_status!=='inactive')&&(diagnostic||meetsRoomsCriterion(x))&&(diagnostic||x.mode!=='aluguel'||!knownArea||Number(x.area)>=60)&&(!recentOnly||publishedRecently(x))};
 
  var visible=function(x){return eligible(x)&&(diagnostic||(!isDiscarded(x)&&(showSimilar||!isSuppressed(x))))};
  el('rentCount').textContent=state.listings.filter(function(x){return x.mode==='aluguel'&&visible(x)&&matchesAgency(x)}).length;
