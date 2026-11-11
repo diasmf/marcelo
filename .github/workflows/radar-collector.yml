@@ -17,7 +17,7 @@ permissions:
   contents: read
 concurrency:
   group: radar-caba-collector
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   smoke:
     if: github.event_name == 'push'
@@ -58,7 +58,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         shell: bash
         run: |
-          if [[ "$DRY_RUN" == "true" ]]; then
+          if [[ "${{ github.event_name }}" == "schedule" || "$DRY_RUN" == "true" ]]; then
             python radar-casas/collector.py
           elif [[ -n "$SUPABASE_URL" && -n "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
             python radar-casas/collector.py --apply
