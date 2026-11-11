@@ -133,6 +133,9 @@ def parse_property(html, url, agency):
         return None, "generic search page"
     if not RENT.search(lead):
         return None, "not rental"
+    # Do not offer commercial-only properties to people looking for a home.
+    if re.search(r"\buso\s+comercial\b|\boficinas?\s+y\s+dep[oó]sito\b", title + " " + text[:800], re.I):
+        return None, "commercial-only use"
     if SALE_ONLY.search(title + " " + text[:200]) and not RENT.search(title):
         return None, "sale"
     if re.search(r"\b(?:USD|U\$S|U\$D)\s*[\d.,]+", title + " " + text[:300], re.I) and not re.search(r"\b(?:ARS|alquiler\s+mensual)\b", title + " " + text[:300], re.I):
@@ -142,7 +145,10 @@ def parse_property(html, url, agency):
         return None, "rented/reserved"
     if SALE_ONLY.search(title) and not RENT.search(title):
         return None, "sale"
-    neighborhood = next((x for x in NEIGHBORHOODS if re.search(re.escape(x), lead, re.I)), None)
+    # Address/title comes before agency footer and related-property navigation.
+    neighborhood = next((x for x in NEIGHBORHOODS if re.search(re.escape(x), title, re.I)), None)
+    if not neighborhood:
+        neighborhood = next((x for x in NEIGHBORHOODS if re.search(re.escape(x), text[:650], re.I)), None)
     if not neighborhood:
         return None, "outside defined CABA neighborhoods"
     rooms = [int(m.group(1)) for m in ROOMS.finditer(lead) if 1 <= int(m.group(1)) <= 12]
@@ -186,6 +192,16 @@ def parse_property(html, url, agency):
         candidate = urljoin(url, meta.get("content", ""))
         if candidate.startswith("https://") and candidate not in images:
             images.append(candidate)
+    for img in soup.select("main img[src], main img[data-src], article img[src], .gallery img[src], .property-gallery img[src]"):
+        raw = img.get("data-src") or img.get("src") or ""
+        candidate = urljoin(url, raw)
+        path = urlsplit(candidate).path.lower()
+        if (candidate.startswith("https://") and re.search(r"\\.(?:jpe?g|png|webp)$", path)
+                and not re.search(r"logo|avatar|icon|banner|placeholder|tracking|profile", path)
+                and candidate not in images):
+            images.append(candidate)
+        if len(images) >= 30:
+            break
     category = "PH" if re.search(r"\bph\b|propiedad horizontal", title, re.I) else ("Casa" if re.search("casa|chalet|duplex|dúplex|triplex", title, re.I) else "Departamento")
     stable_id = "agency-" + hashlib.sha256(url.encode()).hexdigest()[:20]
     return {
