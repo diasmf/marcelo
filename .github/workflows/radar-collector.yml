@@ -37,7 +37,7 @@ jobs:
       - name: Unit tests
         run: python -m unittest discover -s radar-casas -p 'test_collector.py' -v
       - name: Inspect five sources without modifying data
-        run: python radar-casas/collector.py --source-offset ${{ matrix.offset }} --source-limit 5 --max-per-source 15
+        run: python radar-casas/collector.py --source-offset ${{ matrix.offset }} --source-limit 5 --max-per-source 15 --emit-json
   collect:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
