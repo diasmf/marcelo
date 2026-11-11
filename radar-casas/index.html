@@ -81,7 +81,7 @@ function locationFor(x){
  if(fromDb&&fromDb.toLowerCase()!==fallback.toLowerCase())return fromDb;
  var d=String(x.detail||'').slice(0,1500);
  // Match an explicitly published street and number, never infer from prices or coordinates.
- var re=/(?:\\b(?:sobre|ubicad[oa]s? en|direcci[oó]n:?|situad[oa]s? en|calle|en)\\s+)?((?:(?:Av\\.?|Avenida|Gral\\.?|General|Calle|Pasaje|Pje\\.?)\\s+)?[A-ZÁÉÍÓÚÑ][\\p{L}.-]+(?:\\s+(?:[A-ZÁÉÍÓÚÑ][\\p{L}.-]+|de|del|la|las|los|y|[A-Z])){0,5})\\s+(al\\s+)?(\\d{2,5}(?:\\.\\d{3})?)(?!\\d)/gu;
+ var re=/(?:\b(?:sobre|ubicad[oa]s? en|direcci[oó]n:?|situad[oa]s? en|calle|en)\s+)?((?:(?:Av\.?|Avenida|Gral\.?|General|Calle|Pasaje|Pje\.?)\s+)?[A-ZÁÉÍÓÚÑ][\p{L}.-]+(?:\s+(?:[A-ZÁÉÍÓÚÑ][\p{L}.-]+|de|del|la|las|los|y|[A-Z])){0,5})\s+(al\s+)?(\d{2,5}(?:\.\d{3})?)(?!\d)/gu;
  var m;
  while((m=re.exec(d))!==null){
   var street=m[1].trim(),number=m[3];
