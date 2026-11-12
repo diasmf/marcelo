@@ -370,20 +370,58 @@ function meetsAreaCriterion(x){
  if(x.area===null||x.area===undefined||x.area===''||!Number.isFinite(area)||area<=0)return true;
  return (!min||area>=min)&&(!max||area<=max);
 }
+var fxQuote={rate:1578.3,stamp:'2026-11-12',live:false};
+var fxManuallyChanged=false;
+function rateForRent(){
+ var manual=Number(el('fxRate').value);
+ return Number.isFinite(manual)&&manual>0?manual:fxQuote.rate;
+}
+function formatARS(n){return new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0}).format(Math.round(n))}
+function budgetEnabled(){return el('rentBudgetEnabled').checked}
+function withinRentBudget(x){
+ if(x.mode!=='aluguel'||!budgetEnabled())return true;
+ var amount=Number(x.price),min=Number(el('rentMinUsd').value||0),max=Number(el('rentMaxUsd').value||0);
+ if(!Number.isFinite(amount)||amount<=0)return false;
+ if(min>0&&max>0&&min>max)return false;
+ if(x.cur==='ARS')amount=amount/rateForRent();
+ else if(x.cur!=='USD')return false;
+ return (!min||amount>=min)&&(!max||amount<=max);
+}
+function updateBudgetLabel(){
+ var min=Number(el('rentMinUsd').value||0),max=Number(el('rentMaxUsd').value||0),rate=rateForRent();
+ var stamp=fxQuote.stamp?(dateBR(fxQuote.stamp)||fxQuote.stamp):'';
+ var source=fxManuallyChanged?'cotação ajustada manualmente':(fxQuote.live?'MEP atualizado '+stamp:'MEP de referência '+stamp);
+ var range=(!min&&!max?'sem limite':(min&&max?'US$ '+formatARS(min)+'–'+formatARS(max):min?'a partir de US$ '+formatARS(min):'até US$ '+formatARS(max)));
+ el('budgetLabel').textContent=range;
+ el('rentFxHelp').textContent='ARS '+(min?formatARS(min*rate):'0')+'–'+(max?formatARS(max*rate):'sem máximo')+' · 1 US$ ≈ ARS '+formatARS(rate)+' ('+source+')';
+}
+async function refreshDollarMEP(){
+ try{
+  var response=await fetch('https://dolarapi.com/v1/dolares/bolsa',{cache:'no-store'});
+  if(!response.ok)throw Error('Cotação indisponível');
+  var quote=await response.json(),rate=Number(quote.venta),when=new Date(quote.fechaActualizacion);
+  if(!Number.isFinite(rate)||rate<100||rate>100000||!Number.isFinite(when.getTime()))throw Error('Cotação inválida');
+  if(Date.now()-when.getTime()>72*3600000||when.getTime()-Date.now()>3600000)throw Error('Cotação desatualizada');
+  fxQuote={rate:rate,stamp:when.toISOString().slice(0,10),live:true};
+  if(!fxManuallyChanged)el('fxRate').value=String(rate);
+ }catch(e){fxQuote.live=false}
+ render();
+}
 function primaryFilterIsActive(){
- return !el('diagnosticMode').checked&&el('minBeds').value==='3'&&el('minRooms').value==='4'&&Number(el('minArea').value)===60&&!el('maxArea').value;
+ return !el('diagnosticMode').checked&&el('minBeds').value==='3'&&el('minRooms').value==='4'&&Number(el('minArea').value)===60&&!el('maxArea').value&&budgetEnabled()&&el('rentMinUsd').value==='600'&&el('rentMaxUsd').value==='1200';
 }
 function togglePrimaryFilters(){
  if(primaryFilterIsActive()){
-  el('minBeds').value='';el('minRooms').value='';el('minArea').value='';el('maxArea').value='';
+  el('minBeds').value='';el('minRooms').value='';el('minArea').value='';el('maxArea').value='';el('rentBudgetEnabled').checked=false;
  }else{
   el('minBeds').value='3';el('minRooms').value='4';el('minArea').value='60';el('maxArea').value='';
+  el('rentMinUsd').value='600';el('rentMaxUsd').value='1200';el('rentBudgetEnabled').checked=true;
   el('diagnosticMode').checked=false;
  }
  render();
 }
 function showAllAgencyRecords(preserveAgency){
- el('minBeds').value='';el('minRooms').value='';el('minArea').value='';el('maxArea').value='';
+ el('minBeds').value='';el('minRooms').value='';el('minArea').value='';el('maxArea').value='';el('rentBudgetEnabled').checked=false;
  if(!preserveAgency)el('agencyFilter').value='';
  el('search').value='';el('neighborhood').value='';el('propertyType').value='';
  el('outdoor').checked=false;el('garage').checked=false;el('published15').checked=false;
@@ -406,6 +444,8 @@ function populateAgencyFilter(){
  select.value=Array.from(names).includes(previous)?previous:'';
 }
 function render(){
+ updateBudgetLabel();
+ el('rentBudgetBar').classList.toggle('hidden',state.tab!=='aluguel');
  el('mainPreset').setAttribute('aria-pressed',String(primaryFilterIsActive()));
  el('mainPreset').textContent=primaryFilterIsActive()?'✓ Meu filtro principal':'Meu filtro principal';
  var diagnostic=el('diagnosticMode').checked;
@@ -424,10 +464,10 @@ function render(){
  el('inventorySummary').innerHTML='<strong>'+inventory.length+' '+modeLabel+' cadastrados</strong>'+
    '<span class="inventory-dot">·</span><strong>'+photoReadyCount+' exibíveis</strong>'+
    '<span class="inventory-details">'+inactiveCount+' marcados inativos · '+missingPhotosCount+
-   ' sem fotos carregáveis · o filtro de dormitórios e área reduz ainda mais esse total. '+
+   ' sem fotos carregáveis · os filtros de dormitórios, área e orçamento podem reduzir esse total. '+
    (diagnostic?'Exibindo também inativos e sem fotos.':'Desative “Meu filtro principal” para ver os exibíveis, ou clique “Ver todos os cadastrados” para incluir também os ocultos.')+'</span>';
  var matchesAgency=function(x){return !selectedAgency||canonicalAgency(x.agency)===selectedAgency};
- var eligible=function(x){return (diagnostic||x.listing_status!=='inactive')&&(diagnostic||photosFor(x).length>0)&&(diagnostic||(meetsRoomsCriterion(x)&&meetsAreaCriterion(x)))&&(!recentOnly||publishedRecently(x))};
+ var eligible=function(x){return (diagnostic||x.listing_status!=='inactive')&&(diagnostic||photosFor(x).length>0)&&(diagnostic||(meetsRoomsCriterion(x)&&meetsAreaCriterion(x)&&withinRentBudget(x)))&&(!recentOnly||publishedRecently(x))};
 
  var visible=function(x){return eligible(x)&&(diagnostic||(!isDiscarded(x)&&(showSimilar||!isSuppressed(x))))};
  el('rentCount').textContent=state.listings.filter(function(x){return x.mode==='aluguel'&&visible(x)&&matchesAgency(x)}).length;
@@ -493,7 +533,7 @@ function render(){
  var byRooms=modeBase.filter(meetsRoomsCriterion);
  var excludedRooms=modeBase.length-byRooms.length;
  var excludedArea=byRooms.filter(function(x){return !meetsAreaCriterion(x)}).length;
- var msg=arr.length+' imóveis · '+(selectedAgency?selectedAgency+' · ':'')+(diagnostic?'Modo teste: todos os anúncios cadastrados':roomFilterText()+(el('minArea').value?' · '+el('minArea').value+' m² mín.':''));
+ var msg=arr.length+' imóveis · '+(selectedAgency?selectedAgency+' · ':'')+(diagnostic?'Modo teste: todos os anúncios cadastrados':roomFilterText()+(el('minArea').value?' · '+el('minArea').value+' m² mín.':'')+(state.tab==='aluguel'&&budgetEnabled()?' · '+el('budgetLabel').textContent:''));
  if(diagnostic)msg+=' · '+modeBase.length+' fichas no banco (inclusive inativas)';
  if(recentOnly)msg+=' · Publicação original nos últimos 15 dias';
  if(recentOnly&&!state.listings.some(function(x){return publishedRecently(x)}))msg='Ainda não há anúncios com data ORIGINAL de publicação comprovada nos últimos 15 dias. A data de descoberta pelo radar não é usada como publicação.';
@@ -576,9 +616,12 @@ el('agencyCards').addEventListener('click',function(e){
  render();window.scrollTo({top:0,behavior:'smooth'});
 });
 document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){setTab(b.dataset.tab)})});
-['search','neighborhood','propertyType','agencyFilter','diagnosticMode','order','outdoor','garage','published15','showSimilar','minBeds','minRooms','minArea','maxArea'].forEach(function(k){el(k).addEventListener('input',render)});
+['search','neighborhood','propertyType','agencyFilter','diagnosticMode','order','outdoor','garage','published15','showSimilar','minBeds','minRooms','minArea','maxArea','rentBudgetEnabled','rentMinUsd','rentMaxUsd'].forEach(function(k){el(k).addEventListener('input',render)});
 ['minBeds','minRooms','minArea','maxArea'].forEach(function(k){el(k).addEventListener('input',function(){if(el('diagnosticMode').checked){el('diagnosticMode').checked=false;render()}})});
 el('mainPreset').addEventListener('click',togglePrimaryFilters);
+el('fxRate').addEventListener('input',function(){fxManuallyChanged=true;render()});
+['rentMinUsd','rentMaxUsd'].forEach(function(k){el(k).addEventListener('input',function(){el('rentBudgetEnabled').checked=true;if(el('diagnosticMode').checked)el('diagnosticMode').checked=false;render()})});
+el('rentBudgetEnabled').addEventListener('change',function(){if(el('diagnosticMode').checked)el('diagnosticMode').checked=false;render()});
 el('showAllPreset').addEventListener('click',function(){showAllAgencyRecords(false)});
 el('ownerBtn').addEventListener('click',async function(){if(state.ownerKey){var ok=await loadReviews();if(ok)toast('Sincronização conferida');return}await ensureOwner()});
 // Invalid photos are removed from the carousel instead of showing broken-image icons.
@@ -598,5 +641,6 @@ el('cards').addEventListener('error',function(e){
 el('cards').addEventListener('click',function(e){var a=e.target.closest('[data-advance]');if(a){setCardSlide(a.dataset.id,Number(a.dataset.advance));return}var image=e.target.closest('img[data-slide]');if(image){if(Date.now()-lastCardSwipeAt<700)return;var imageCard=image.closest('.card'),next=imageCard&&imageCard.querySelector('[data-advance][data-id]'),single=imageCard&&imageCard.querySelector('[data-zoom]');if(next&&photosFor(item(next.dataset.id)).length>1)setCardSlide(next.dataset.id,1);else if(single)openLightbox(single.dataset.zoom);return}var embed=e.target.closest('[data-sourcegallery]');if(embed){openSourceGallery(embed.dataset.sourcegallery);return}var more=e.target.closest('[data-expand]');if(more){loadMorePhotos(more.dataset.expand);return}var z=e.target.closest('[data-zoom]');if(z){openLightbox(z.dataset.zoom);return}var t=e.target.closest('[data-rating]');if(t){var id=t.getAttribute('data-id'),what=t.getAttribute('data-rating');saveReview(id,{rating:(state.ratings[id]||{}).rating===what?'':what})}});
 el('cards').addEventListener('change',function(e){var t=e.target.closest('[data-note]');if(t)saveReview(t.getAttribute('data-note'),{note:t.value.slice(0,1200)})});
 load();
+refreshDollarMEP();
 })();
 </script></body></html>
