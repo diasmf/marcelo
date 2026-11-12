@@ -6,6 +6,7 @@ import threading
 import http.server
 import socketserver
 from playwright.sync_api import sync_playwright
+from datetime import datetime, timezone
 
 def record(id,agency,beds,area,status="pending",mode="aluguel"):
     return {
@@ -47,6 +48,12 @@ def png_image():
 
 PHOTO=png_image()
 
+def mock_fx(route):
+    route.fulfill(status=200,content_type="application/json",body=json.dumps({
+        "casa":"bolsa","nombre":"Dólar MEP","venta":1600.0,"compra":1590.0,
+        "fechaActualizacion":datetime.now(timezone.utc).isoformat()
+    }))
+
 def mock_photo(route):
     if "-broken.png" in route.request.url:
         route.fulfill(status=404,body="Missing")
@@ -66,9 +73,16 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         page.on("pageerror",lambda err:errors.append(str(err)))
         page.route("**/api/listings",lambda route:route.fulfill(status=200,content_type="application/json",body=json.dumps(sample)))
         page.route("https://radar-photo.test/**",mock_photo)
+        page.route("https://dolarapi.com/v1/dolares/bolsa",mock_fx)
         page.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
         page.wait_for_function("document.querySelectorAll('#agencyFilter option').length >= 4",timeout=10000)
         assert page.locator("#cards article.card").count()==2, "default shows two qualifying active rentals"
+        assert page.locator("#rentBudgetEnabled").is_checked()
+        assert page.locator("#budgetLabel").inner_text()=="US$ 600–1.200"
+        page.wait_for_function("document.querySelector('#rentFxHelp').textContent.includes('1.600')")
+        assert "960.000" in page.locator("#rentFxHelp").inner_text()
+        assert "1.920.000" in page.locator("#rentFxHelp").inner_text()
+        assert page.locator(".hero").bounding_box()["height"]<190, "desktop hero must be compact"
         assert "5 aluguéis cadastrados" in page.locator("#inventorySummary").inner_text()
         assert "3 exibíveis" in page.locator("#inventorySummary").inner_text()
         assert "1 marcados inativos" in page.locator("#inventorySummary").inner_text()
@@ -77,10 +91,12 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         page.wait_for_function("document.querySelector('#subtitle').textContent.includes('imóveis')")
         assert page.locator(".photo-count").count()>=2, "carousels should show multiple photos"
         first=page.locator('article.card:has([data-zoom="casa-a"])')
+        assert first.locator(".note-expand").count()==1
+        assert first.locator(".note-expand").get_attribute("open") is None
         assert first.locator("details.detail-expand").count()==1
         assert first.locator("details.detail-expand").get_attribute("open") is None
         assert first.locator(".detail-preview").evaluate(
-            "(el) => getComputedStyle(el).getPropertyValue('-webkit-line-clamp')")=="3"
+            "(el) => getComputedStyle(el).getPropertyValue('-webkit-line-clamp')")=="2"
         assert first.locator(".detail-preview").bounding_box()["height"] < 70
         first.locator("details.detail-expand summary").click()
         assert first.locator(".detail-full").is_visible()
@@ -160,9 +176,11 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         mobile=browser.new_page(viewport={"width":390,"height":844},device_scale_factor=2,is_mobile=True,has_touch=True)
         mobile.route("**/api/listings",lambda route:route.fulfill(status=200,content_type="application/json",body=json.dumps(sample)))
         mobile.route("https://radar-photo.test/**",mock_photo)
+        mobile.route("https://dolarapi.com/v1/dolares/bolsa",mock_fx)
         mobile.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
         mobile.wait_for_function("document.querySelectorAll('#cards article.card').length===2",timeout=10000)
         assert mobile.locator('article.card:has([data-zoom="casa-a"]) [data-count]').inner_text()=="1 / 3"
+        assert mobile.locator(".hero").bounding_box()["height"]<250, "mobile hero must remain compact"
         mobile_description=mobile.locator('article.card:has([data-zoom="casa-a"]) details.detail-expand')
         assert mobile_description.count()==1
         assert mobile_description.get_attribute("open") is None
@@ -173,5 +191,44 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         mobile.locator('article.card:has([data-zoom="casa-a"]) [data-advance="1"]').click()
         assert mobile.locator('article.card:has([data-zoom="casa-a"]) [data-count]').inner_text()=="2 / 3"
         mobile.close()
+        # Test direct USD prices and MEP-converted ARS prices with customizable FX.
+        budget_listings=[
+            record("usd-800","Maccaroni",3,120),
+            record("usd-1300","Maccaroni",3,120),
+            record("ars-1500000","Maccaroni",3,120),
+            record("ars-2000000","Maccaroni",3,120),
+            record("ars-800000","Maccaroni",3,120),
+            record("ars-1900000","Maccaroni",3,120),
+            record("sale-100000","Maccaroni",3,120,mode="venda"),
+        ]
+        prices=[("USD",800),("USD",1300),("ARS",1500000),("ARS",2000000),
+                ("ARS",800000),("ARS",1900000),("USD",100000)]
+        for listing,(cur,price) in zip(budget_listings,prices):
+            listing["cur"]=cur
+            listing["price"]=price
+        budget_payload={"listings":budget_listings,"agencies":sample["agencies"]}
+        budget_page=browser.new_page(viewport={"width":1200,"height":860})
+        budget_page.route("**/api/listings",lambda route:route.fulfill(status=200,content_type="application/json",body=json.dumps(budget_payload)))
+        budget_page.route("https://radar-photo.test/**",mock_photo)
+        budget_page.route("https://dolarapi.com/v1/dolares/bolsa",mock_fx)
+        budget_page.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
+        budget_page.wait_for_function("document.querySelector('#rentFxHelp').textContent.includes('1.600')")
+        assert budget_page.locator("#cards article.card").count()==3, "USD 800 and ARS 1.5m / 1.9m qualify at MEP 1600"
+        assert "usd-1300" not in budget_page.locator("#cards").inner_text()
+        assert "ars-2000000" not in budget_page.locator("#cards").inner_text()
+        budget_page.locator("#rentBudgetEnabled").uncheck()
+        assert budget_page.locator("#cards article.card").count()==6, "budget can be disabled without dropping rental records"
+        budget_page.locator("#rentBudgetEnabled").check()
+        assert budget_page.locator("#cards article.card").count()==3
+        budget_page.locator("#moreFilters summary").click()
+        budget_page.fill("#fxRate","1400")
+        assert budget_page.locator("#cards article.card").count()==2, "ARS 1.9m exceeds USD 1200 at FX 1400"
+        budget_page.fill("#rentMaxUsd","900")
+        assert budget_page.locator("#cards article.card").count()==1, "custom maximum applies to both currencies"
+        budget_page.locator('[data-tab="venda"]').click()
+        assert budget_page.locator("#cards article.card").count()==1, "rent budget must not hide property sales"
+        assert not budget_page.locator("#rentBudgetBar").is_visible()
+        budget_page.close()
+        print("RADAR_BUDGET_SMOKE_OK: MEP, USD/ARS thresholds, manual FX, toggling, sale isolation, compact cards")
         browser.close()
     server.shutdown()
