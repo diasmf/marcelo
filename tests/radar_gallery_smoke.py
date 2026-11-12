@@ -33,6 +33,10 @@ sample={
              {"name":"Florencio González","bairro":"Liniers","url":"https://florenciogonzalez.com.ar/","audit_status":"links_found","audit_links_found":165},
              {"name":"Florencio Gonzalez Inmuebles","bairro":"Liniers","url":"https://florenciogonzalez.com.ar/","audit_status":"links_found","audit_links_found":165}]
 }
+# Long listing text should never make the initial card dominate the screen.
+LONG_DESCRIPTION = ("Casa 4 ambientes en alquiler, com sala ampla, quartos iluminados, "
+                    "cozinha separada e pátio. " * 10) + "FINAL DA DESCRIÇÃO ORIGINAL"
+sample["listings"][0]["detail"] = LONG_DESCRIPTION
 
 # Small valid 400x300 image served locally; no external image host is needed.
 def png_image():
@@ -73,6 +77,17 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         page.wait_for_function("document.querySelector('#subtitle').textContent.includes('imóveis')")
         assert page.locator(".photo-count").count()>=2, "carousels should show multiple photos"
         first=page.locator('article.card:has([data-zoom="casa-a"])')
+        assert first.locator("details.detail-expand").count()==1
+        assert first.locator("details.detail-expand").get_attribute("open") is None
+        assert first.locator(".detail-preview").evaluate(
+            "(el) => getComputedStyle(el).getPropertyValue('-webkit-line-clamp')")=="3"
+        assert first.locator(".detail-preview").bounding_box()["height"] < 70
+        first.locator("details.detail-expand summary").click()
+        assert first.locator(".detail-full").is_visible()
+        assert "FINAL DA DESCRIÇÃO ORIGINAL" in first.locator(".detail-full").inner_text()
+        assert first.locator('a:has-text("Anúncio original")').get_attribute("href")=="https://example.org/propiedad/casa-a"
+        first.locator("details.detail-expand summary").click()
+        assert first.locator("details.detail-expand").get_attribute("open") is None
         assert first.locator("[data-count]").inner_text()=="1 / 3"
         first.locator('[data-advance="1"]').click()
         assert first.locator("[data-count]").inner_text()=="2 / 3"
@@ -148,6 +163,13 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         mobile.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
         mobile.wait_for_function("document.querySelectorAll('#cards article.card').length===2",timeout=10000)
         assert mobile.locator('article.card:has([data-zoom="casa-a"]) [data-count]').inner_text()=="1 / 3"
+        mobile_description=mobile.locator('article.card:has([data-zoom="casa-a"]) details.detail-expand')
+        assert mobile_description.count()==1
+        assert mobile_description.get_attribute("open") is None
+        assert mobile_description.locator(".detail-preview").bounding_box()["height"] < 70
+        mobile_description.locator("summary").click()
+        assert "FINAL DA DESCRIÇÃO ORIGINAL" in mobile_description.locator(".detail-full").inner_text()
+        mobile_description.locator("summary").click()
         mobile.locator('article.card:has([data-zoom="casa-a"]) [data-advance="1"]').click()
         assert mobile.locator('article.card:has([data-zoom="casa-a"]) [data-count]').inner_text()=="2 / 3"
         mobile.close()
