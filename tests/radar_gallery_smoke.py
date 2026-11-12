@@ -81,6 +81,8 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         broken.locator('[data-advance="1"]').click()
         page.wait_for_function("document.querySelector('[data-zoom=\\\"casa-c\\\"]') && document.querySelector('article.card:has([data-zoom=\\\"casa-c\\\"]) [data-count]').textContent.endsWith('/ 2')",timeout=10000)
         assert page.locator('#cards').inner_text().count('sem-foto')==0, "no-photo listing hidden from normal cards"
+        # Optional controls live in a collapsed <details> panel.
+        page.locator("#moreFilters summary").click()
         page.select_option("#agencyFilter",label="Maccaroni")
         assert page.locator("#cards article.card").count()==1, "agency filter should narrow default rentals"
         assert page.locator("#minBeds").input_value()=="3"
