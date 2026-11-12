@@ -65,6 +65,11 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         page.goto(host+"/radar-casas/index.html",wait_until="domcontentloaded")
         page.wait_for_function("document.querySelectorAll('#agencyFilter option').length >= 4",timeout=10000)
         assert page.locator("#cards article.card").count()==2, "default shows two qualifying active rentals"
+        assert "5 aluguéis cadastrados" in page.locator("#inventorySummary").inner_text()
+        assert "3 exibíveis" in page.locator("#inventorySummary").inner_text()
+        assert "1 marcados inativos" in page.locator("#inventorySummary").inner_text()
+        assert "1 sem fotos" in page.locator("#inventorySummary").inner_text()
+        assert page.locator("#showAllPreset").is_visible()
         page.wait_for_function("document.querySelector('#subtitle').textContent.includes('imóveis')")
         assert page.locator(".photo-count").count()>=2, "carousels should show multiple photos"
         first=page.locator('article.card:has([data-zoom="casa-a"])')
@@ -110,6 +115,9 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         assert page.locator("#mainPreset").get_attribute("aria-pressed")=="true"
         assert page.locator("#cards article.card").count()==1, "toggle on restores the standard criteria"
         page.click("#showAllPreset")
+        assert page.locator("#agencyFilter").input_value()=="", "all-registered must reset the agency filter"
+        assert page.locator("#cards article.card").count()==5
+        page.select_option("#agencyFilter",label="Maccaroni")
         assert page.locator("#cards article.card").count()==4
         assert page.locator("#diagnosticMode").is_checked()
         page.click("#mainPreset")
