@@ -84,7 +84,7 @@ class AgencyCatalogDiscoveryTests(unittest.TestCase):
                     return ""
                 with patch("collector.fetch", side_effect=fake_fetch):
                     found = candidates(None, base, limit=20)
-                self.assertIn(detail, found)
+                self.assertIn(detail.rstrip("/"), found)
 
     def test_gamez_query_identifies_individual_property(self):
         base = "https://www.gamezpropiedades.com.ar/"
