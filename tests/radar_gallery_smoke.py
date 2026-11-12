@@ -206,6 +206,8 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         for listing,(cur,price) in zip(budget_listings,prices):
             listing["cur"]=cur
             listing["price"]=price
+        # A syndication-only agency may have listings but no catalogue record.
+        budget_listings[0]["agency"]="New Broker"
         budget_payload={"listings":budget_listings,"agencies":sample["agencies"]}
         budget_page=browser.new_page(viewport={"width":1200,"height":860})
         budget_page.route("**/api/listings",lambda route:route.fulfill(status=200,content_type="application/json",body=json.dumps(budget_payload)))
@@ -228,6 +230,13 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         budget_page.locator('[data-tab="venda"]').click()
         assert budget_page.locator("#cards article.card").count()==1, "rent budget must not hide property sales"
         assert not budget_page.locator("#rentBudgetBar").is_visible()
+        budget_page.locator('[data-tab="agencies"]').click()
+        assert budget_page.locator("#otherAgencyGroup").is_visible(), "listing-only advertisers must be visible separately"
+        assert "New Broker" in budget_page.locator("#otherAgencyCards").inner_text()
+        budget_page.locator("#otherAgencyGroup summary").click()
+        budget_page.locator('[data-testagency="New Broker"]').click()
+        assert budget_page.locator("#agencyFilter").input_value()=="New Broker"
+        assert budget_page.locator("#cards article.card").count()==1, "listing-only agency selection must show its source"
         budget_page.close()
         print("RADAR_BUDGET_SMOKE_OK: MEP, USD/ARS thresholds, manual FX, toggling, sale isolation, compact cards")
         browser.close()
