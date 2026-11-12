@@ -58,10 +58,11 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "schedule" || "$DRY_RUN" == "true" ]]; then
+          if [[ "$DRY_RUN" == "true" ]]; then
             python radar-casas/collector.py
           elif [[ -n "$SUPABASE_URL" && -n "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
             python radar-casas/collector.py --apply
           else
-            echo 'Skipping writes: Radar Supabase GitHub secrets are not yet configured.'
+            echo 'Collector remains read-only: Radar Supabase GitHub secrets are not configured.'
+            python radar-casas/collector.py
           fi
