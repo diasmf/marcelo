@@ -48,8 +48,42 @@
 .inventory-summary .inventory-details{display:block;color:#6e7b72;font-size:12px}
 .filter-all-primary{background:#fff;color:#245a46;border-color:#bdd4c4}
 @media(max-width:670px){.inventory-summary{font-size:12px}.filter-all-primary{width:100%;order:3}}
+
+/* Compact layout, preserving full galleries and expandable descriptions. */
+.bar{padding:11px 0}.logo{font-size:18px}.logo i{width:35px;height:35px;border-radius:10px}
+.hero{padding:17px 23px;border-radius:17px;gap:14px}
+.hero h1{font-size:27px;margin:5px 0 6px;letter-spacing:-.9px}.hero p{font-size:13px;line-height:1.4}
+.eyebrow{font-size:10px;letter-spacing:1.4px}
+.stat{min-width:90px;padding:9px 12px;border-radius:11px}.stat b{font-size:21px}.stat small{font-size:11px}
+.nav{margin:14px 0 11px}.sectionhead{margin:17px 0 11px}.sectionhead h2{font-size:20px}
+.cards{gap:13px}.card{border-radius:14px}.card .photo{aspect-ratio:1.91/1}
+.card .body{padding:12px 13px}.card .sub{font-size:11px}
+.card .address{font-size:18px;margin-top:4px}.card .price{font-size:19px;margin:8px 0}
+.card .listing-location{margin:5px 0 2px;font-size:11px}
+.card .facts{gap:5px}.card .facts span{padding:4px 6px;font-size:11px;border-radius:6px}
+.card .detail,.card .detail-expand{margin:8px 0 5px;min-height:0}
+.card .detail-preview{-webkit-line-clamp:2;line-clamp:2;max-height:3.1em}.card .detail-more{margin-top:3px}
+.card .listing-date{font-size:11px;margin:6px 0 2px}.card .agency{font-size:11px}
+.card .status{min-height:0;font-size:11px;line-height:1.3;margin-top:4px}
+.card .actions{margin-top:9px}.card .actions button{padding:8px 5px}.card .links{margin-top:7px}
+.card .note-expand{margin-top:7px}.card .note-expand summary{font-size:11px;color:var(--brand);font-weight:650;cursor:pointer}
+.card .note-expand textarea{min-height:62px;margin-top:6px}
+.rent-budget-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 2px 0}
+.rent-budget-bar label{display:flex;gap:8px;align-items:center;font-weight:700;font-size:13px;color:var(--brand);cursor:pointer}
+.rent-budget-bar input{min-width:auto;width:16px;height:16px;accent-color:var(--brand)}
+.rent-budget-bar #rentFxHelp{font-size:12px;color:var(--muted);line-height:1.45}
+.rent-budget-bar label:has(input:not(:checked)){opacity:.65}
+.budget-settings{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.budget-settings label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.budget-settings input{width:94px;min-width:0}
+@media(max-width:670px){
+.bar{padding:9px 0}.logo{font-size:16px}.logo i{width:32px;height:32px}
+.hero{padding:16px 17px}.hero h1{font-size:24px}.statgrid{margin-top:10px}.stat{min-width:76px;padding:7px 9px}
+.nav{margin:12px 0 10px}.card .photo{aspect-ratio:1.85/1}.card .body{padding:12px}
+.rent-budget-bar{gap:4px 8px}.budget-settings label{flex:1 1 130px}.budget-settings input{width:92px}
+}
 </style></head><body><div class="wrap"><header class="bar"><div class="logo"><i>⌂</i> Meu Radar de Casas</div><div class="date">Capital Federal · Buenos Aires<br><span id="state">Carregando imóveis…</span></div></header>
-<section class="hero"><div><div class="eyebrow">Busca personalizada em CABA</div><h1>Uma casa para chamar de sua.</h1><p>Casas, PHs e apartamentos para alugar ou comprar. Deslize pelas fotos e amplie sem sair da lista.</p></div><div class="statgrid"><div class="stat"><b id="rentCount">—</b><small>aluguéis</small></div><div class="stat"><b id="saleCount">—</b><small>à venda</small></div><div class="stat"><b id="favCount">—</b><small>favoritos</small></div></div></section>
+<section class="hero"><div><div class="eyebrow">Busca personalizada em CABA</div><h1>Imóveis no oeste de CABA</h1><p>Casas, PHs e apartamentos com fotos, filtros e favoritos.</p></div><div class="statgrid"><div class="stat"><b id="rentCount">—</b><small>aluguéis</small></div><div class="stat"><b id="saleCount">—</b><small>à venda</small></div><div class="stat"><b id="favCount">—</b><small>favoritos</small></div></div></section>
 <nav class="nav"><button class="tab active" data-tab="aluguel">⌂ Aluguel</button><button class="tab" data-tab="venda">◇ À venda</button><button class="tab" data-tab="favorites">♥ Favoritos</button><button class="tab" data-tab="rejected">✕ Descartados</button><button class="tab" data-tab="agencies">▤ Imobiliárias</button><button id="ownerBtn" class="owner" title="Sincronizar escolhas entre dispositivos">☁ Sincronizar escolhas</button></nav>
 <div id="syncStatus" class="syncStatus hidden" role="status"></div>
 <div id="propertyView"><div class="filter">
