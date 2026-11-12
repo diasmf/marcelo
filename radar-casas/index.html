@@ -102,6 +102,11 @@
     <label class="filter-number">Ambientes mín. <select id="minRooms" aria-label="Mínimo de ambientes"><option value="">Qualquer</option><option value="2">2+</option><option value="3">3+</option><option value="4" selected>4+</option><option value="5">5+</option><option value="6">6+</option></select></label>
     <label class="filter-number">Área mín. (m²) <input id="minArea" inputmode="numeric" type="number" min="0" step="5" value="60" aria-label="Área mínima em metros quadrados"></label>
     <label class="filter-number">Área máx. (m²) <input id="maxArea" inputmode="numeric" type="number" min="0" step="5" placeholder="Sem máximo" aria-label="Área máxima em metros quadrados"></label>
+    <div class="budget-settings">
+     <label>Aluguel mín. US$ <input id="rentMinUsd" type="number" min="0" step="50" value="600" aria-label="Aluguel mínimo em dólares"></label>
+     <label>Aluguel máx. US$ <input id="rentMaxUsd" type="number" min="0" step="50" value="1200" aria-label="Aluguel máximo em dólares"></label>
+     <label>Dólar MEP (ARS) <input id="fxRate" type="number" min="1" step="0.1" value="1578.3" aria-label="Cotação do dólar MEP em pesos argentinos por dólar"></label>
+    </div>
     <label class="check"><input id="outdoor" type="checkbox"> Espaço externo</label>
     <label class="check"><input id="garage" type="checkbox"> Garagem</label>
     <label class="check"><input id="published15" type="checkbox"> Publicados nos últimos 15 dias</label>
@@ -112,6 +117,7 @@
    </div>
   </details>
  </div>
+ <div class="rent-budget-bar" id="rentBudgetBar"><label><input type="checkbox" id="rentBudgetEnabled" checked>Aluguel <span id="budgetLabel">US$ 600–1.200</span></label><span id="rentFxHelp">Convertendo para pesos pela cotação do dólar MEP…</span></div>
 </div><div class="inventory-summary" id="inventorySummary" role="status" aria-live="polite">Conferindo total de imóveis cadastrados…</div><div class="sectionhead"><h2 id="heading">Casas para alugar</h2><p id="subtitle">Carregando os imóveis</p></div><main class="cards" id="cards"><div class="blank">Buscando as opções...</div></main></div>
 <section id="agencyView" class="hidden"><div class="sectionhead"><h2>Imobiliárias da região</h2><p>Priorizamos pequenas corretoras e anúncios nos próprios sites.</p></div><div id="agencyCards" class="agencygrid"></div></section>
 <div class="notice"><strong>Sobre os anúncios:</strong> fotos e preços são informados pelas fontes. A disponibilidade ainda deve ser confirmada com a imobiliária. Se alguma imagem não carregar, use “Galeria original” para consultar a publicação. Falha temporária de acesso não prova que o imóvel saiu do mercado.</div><footer class="footer">Radar de Casas CABA · Liniers, Mataderos, Villa Luro, Versalles, Vélez Sarsfield, Villa Devoto e Monte Castro · Atualizações e avaliações sincronizadas online.</footer></div><div id="toast" role="status"></div><div id="photoLightbox" role="dialog" aria-modal="true" aria-label="Galeria de fotos"><button class="close" id="closeLightbox" aria-label="Fechar">×</button><button class="largeNav largePrev" id="prevLightbox" aria-label="Foto anterior">‹</button><img id="lightboxImg" alt="Foto do imóvel"><button class="largeNav largeNext" id="nextLightbox" aria-label="Foto seguinte">›</button><div class="lbCaption" id="lbCaption"></div></div>
