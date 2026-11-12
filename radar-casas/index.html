@@ -367,6 +367,9 @@ function render(){
  var inactiveCount=inventory.filter(function(x){return x.listing_status==='inactive'}).length;
  var missingPhotosCount=inventory.filter(function(x){return x.listing_status!=='inactive'&&!photosFor(x).length}).length;
  var photoReadyCount=inventory.length-inactiveCount-missingPhotosCount;
+ var browseMode=state.tab==='aluguel'||state.tab==='venda';
+ el('inventorySummary').classList.toggle('hidden',!browseMode);
+ el('showAllPreset').classList.toggle('hidden',!browseMode);
  el('showAllPreset').textContent='Ver todos os '+inventory.length+' cadastrados';
  el('inventorySummary').innerHTML='<strong>'+inventory.length+' '+modeLabel+' cadastrados</strong>'+
    '<span class="inventory-dot">·</span><strong>'+photoReadyCount+' exibíveis</strong>'+
