@@ -224,11 +224,11 @@ function eligiblePhoto(u,id){
 function isOwnListingPhoto(u,x){
  try{
   var source=new URL(x.url||'');
-  if(!/(^|\\.)proppies\\.app$/i.test(source.hostname))return true;
-  var id=source.pathname.match(/-(\\d+)\\/?$/);
+  if(!/(^|\.)proppies\.app$/i.test(source.hostname))return true;
+  var id=source.pathname.match(/-(\d+)\/?$/);
   if(!id)return false;
   var pic=new URL(u);
-  return pic.protocol==='https:'&&pic.hostname==='cdn.proppies.app'&&pic.pathname.startsWith('/propiedad/'+id[1]+'/')&&/\\.(?:jpe?g|png|webp)$/i.test(pic.pathname);
+  return pic.protocol==='https:'&&pic.hostname==='cdn.proppies.app'&&pic.pathname.startsWith('/propiedad/'+id[1]+'/')&&/\.(?:jpe?g|png|webp)$/i.test(pic.pathname);
  }catch(e){return false}
 }
 function tryPhoto(url){return new Promise(function(done){var img=new Image();var ended=false;var timer=setTimeout(function(){if(!ended){ended=true;done(false)}},12000);img.onload=function(){if(ended)return;ended=true;clearTimeout(timer);done(img.naturalWidth>250&&img.naturalHeight>180)};img.onerror=function(){if(ended)return;ended=true;clearTimeout(timer);done(false)};img.src=url})}
