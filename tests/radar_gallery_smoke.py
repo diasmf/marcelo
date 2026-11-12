@@ -116,7 +116,7 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         assert not page.locator("#diagnosticMode").is_checked()
         assert page.locator("#cards article.card").count()==1
         page.locator("#diagnosticMode").check()
-        assert page.locator("#cards article.card").count()==3, "diagnostic should show both invalid and inactive properties"
+        assert page.locator("#cards article.card").count()==4, "diagnostic should also show the no-photo record"
         assert "INATIVO" in page.locator("#cards").inner_text(), "inactive must be marked"
         page.locator("#diagnosticMode").uncheck()
         assert page.locator("#cards article.card").count()==1
