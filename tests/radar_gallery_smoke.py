@@ -83,9 +83,9 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         assert "960.000" in page.locator("#rentFxHelp").inner_text()
         assert "1.920.000" in page.locator("#rentFxHelp").inner_text()
         assert page.locator(".hero").bounding_box()["height"]<190, "desktop hero must be compact"
-        assert "5 aluguéis cadastrados" in page.locator("#inventorySummary").inner_text()
-        assert "3 exibíveis" in page.locator("#inventorySummary").inner_text()
-        assert "1 marcados inativos" in page.locator("#inventorySummary").inner_text()
+        assert "4 aluguéis não retirados" in page.locator("#inventorySummary").inner_text()
+        assert "3 com fotos" in page.locator("#inventorySummary").inner_text()
+        assert "1 retirados e ocultos" in page.locator("#inventorySummary").inner_text()
         assert "1 sem fotos" in page.locator("#inventorySummary").inner_text()
         assert page.locator("#showAllPreset").is_visible()
         page.wait_for_function("document.querySelector('#subtitle').textContent.includes('imóveis')")
@@ -147,16 +147,16 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         assert page.locator("#cards article.card").count()==1, "toggle on restores the standard criteria"
         page.click("#showAllPreset")
         assert page.locator("#agencyFilter").input_value()=="", "all-registered must reset the agency filter"
-        assert page.locator("#cards article.card").count()==5
+        assert page.locator("#cards article.card").count()==4, 'withdrawn items must stay hidden even when filters are disabled'
         page.select_option("#agencyFilter",label="Maccaroni")
-        assert page.locator("#cards article.card").count()==4
+        assert page.locator("#cards article.card").count()==3
         assert page.locator("#diagnosticMode").is_checked()
         page.click("#mainPreset")
         assert not page.locator("#diagnosticMode").is_checked()
         assert page.locator("#cards article.card").count()==1
         page.locator("#diagnosticMode").check()
-        assert page.locator("#cards article.card").count()==4, "diagnostic should also show the no-photo record"
-        assert "INATIVO" in page.locator("#cards").inner_text(), "inactive must be marked"
+        assert page.locator("#cards article.card").count()==3, "diagnostic may show no-photo, never withdrawn"
+        assert "casa-inativa" not in page.locator("#cards").inner_text(), "withdrawn must be hidden in all listing modes"
         page.locator("#diagnosticMode").uncheck()
         assert page.locator("#cards article.card").count()==1
         page.locator('[data-tab="agencies"]').click()
