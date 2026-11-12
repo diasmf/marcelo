@@ -33,7 +33,12 @@
 .sourceGalleryFrame{width:100%;height:100%;border:0;background:#f6f7f6}
 .sourceGalleryNote{padding:8px 14px;background:#f6f9f6;font-size:12px;color:#516558}
 @media(max-width:670px){#sourceGalleryOverlay{padding:0}.sourceGalleryPanel{height:100dvh;border-radius:0}.sourceGalleryHeader{gap:8px}}
-</style><style>.sort-label{display:flex;align-items:center;color:var(--muted);font-weight:700;font-size:12px;padding:0 2px 0 9px}.listing-date{font-size:12px;color:#587068;margin:9px 0 1px;line-height:1.5}.listing-date strong{color:#235840;font-weight:720}.photo-more{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:4;background:#fff;color:#245b45;padding:7px 12px;white-space:nowrap;font-size:12px;font-weight:750;border:0;border-radius:9px;box-shadow:0 3px 12px #0002}.photo-more:disabled{opacity:.7}@media(max-width:670px){.filter .sort-label{flex:0 0 auto;align-self:center}.filter #order{flex:1;min-width:180px}}</style></head><body><div class="wrap"><header class="bar"><div class="logo"><i>⌂</i> Meu Radar de Casas</div><div class="date">Capital Federal · Buenos Aires<br><span id="state">Carregando imóveis…</span></div></header>
+</style><style>.sort-label{display:flex;align-items:center;color:var(--muted);font-weight:700;font-size:12px;padding:0 2px 0 9px}.listing-date{font-size:12px;color:#587068;margin:9px 0 1px;line-height:1.5}.listing-date strong{color:#235840;font-weight:720}.photo-more{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:4;background:#fff;color:#245b45;padding:7px 12px;white-space:nowrap;font-size:12px;font-weight:750;border:0;border-radius:9px;box-shadow:0 3px 12px #0002}.photo-more:disabled{opacity:.7}@media(max-width:670px){.filter .sort-label{flex:0 0 auto;align-self:center}.filter #order{flex:1;min-width:180px}}.inventory-summary{margin:12px 0 0;padding:11px 14px;border:1px solid #dae6dc;background:#fff;border-radius:12px;color:#465e50;font-size:13px;line-height:1.6}
+.inventory-summary strong{color:#1b6046}.inventory-summary .inventory-dot{padding:0 7px;color:#8c9a8e}
+.inventory-summary .inventory-details{display:block;color:#6e7b72;font-size:12px}
+.filter-all-primary{background:#fff;color:#245a46;border-color:#bdd4c4}
+@media(max-width:670px){.inventory-summary{font-size:12px}.filter-all-primary{width:100%;order:3}}
+</style></head><body><div class="wrap"><header class="bar"><div class="logo"><i>⌂</i> Meu Radar de Casas</div><div class="date">Capital Federal · Buenos Aires<br><span id="state">Carregando imóveis…</span></div></header>
 <section class="hero"><div><div class="eyebrow">Busca personalizada em CABA</div><h1>Uma casa para chamar de sua.</h1><p>Casas, PHs e apartamentos para alugar ou comprar. Deslize pelas fotos e amplie sem sair da lista.</p></div><div class="statgrid"><div class="stat"><b id="rentCount">—</b><small>aluguéis</small></div><div class="stat"><b id="saleCount">—</b><small>à venda</small></div><div class="stat"><b id="favCount">—</b><small>favoritos</small></div></div></section>
 <nav class="nav"><button class="tab active" data-tab="aluguel">⌂ Aluguel</button><button class="tab" data-tab="venda">◇ À venda</button><button class="tab" data-tab="favorites">♥ Favoritos</button><button class="tab" data-tab="rejected">✕ Descartados</button><button class="tab" data-tab="agencies">▤ Imobiliárias</button><button id="ownerBtn" class="owner" title="Sincronizar escolhas entre dispositivos">☁ Sincronizar escolhas</button></nav>
 <div id="syncStatus" class="syncStatus hidden" role="status"></div>
@@ -45,7 +50,7 @@
   <select id="order" aria-label="Ordenar imóveis"><option value="recent">Mais novos</option><option value="published">Publicação recente</option><option value="low">Menor preço</option><option value="high">Maior preço</option><option value="area">Maior área</option><option value="smallarea">Menor área</option><option value="recommended">Mais parecidos com favoritos</option></select>
  </div>
  <div class="filter-actions">
-  <button id="mainPreset" type="button" class="filter-preset" aria-pressed="true">✓ Meu filtro principal</button>
+  <button id="mainPreset" type="button" class="filter-preset" aria-pressed="true">✓ Meu filtro principal</button><button id="showAllPreset" type="button" class="filter-all filter-all-primary">Ver todos os cadastrados</button>
   <details class="filter-more" id="moreFilters"><summary>Mais filtros <span aria-hidden="true">⌄</span></summary>
    <div class="filter-more-content">
     <select id="propertyType" aria-label="Tipo de imóvel"><option value="">Casas, PHs e apartamentos</option><option value="Casa">Casas</option><option value="PH">PHs</option><option value="Departamento">Apartamentos</option></select>
@@ -58,13 +63,12 @@
     <label class="check"><input id="published15" type="checkbox"> Publicados nos últimos 15 dias</label>
     <label class="check"><input id="showSimilar" type="checkbox"> Mostrar semelhantes</label>
     <div class="filter-diagnostic">
-     <button id="showAllPreset" type="button" class="filter-all">Ver todos / testar fonte</button>
      <label class="check"><input id="diagnosticMode" type="checkbox"> Incluir inativos e ignorar preferências</label>
     </div>
    </div>
   </details>
  </div>
-</div><div class="sectionhead"><h2 id="heading">Casas para alugar</h2><p id="subtitle">Carregando os imóveis</p></div><main class="cards" id="cards"><div class="blank">Buscando as opções...</div></main></div>
+</div><div class="inventory-summary" id="inventorySummary" role="status" aria-live="polite">Conferindo total de imóveis cadastrados…</div><div class="sectionhead"><h2 id="heading">Casas para alugar</h2><p id="subtitle">Carregando os imóveis</p></div><main class="cards" id="cards"><div class="blank">Buscando as opções...</div></main></div>
 <section id="agencyView" class="hidden"><div class="sectionhead"><h2>Imobiliárias da região</h2><p>Priorizamos pequenas corretoras e anúncios nos próprios sites.</p></div><div id="agencyCards" class="agencygrid"></div></section>
 <div class="notice"><strong>Sobre os anúncios:</strong> fotos e preços são informados pelas fontes. A disponibilidade ainda deve ser confirmada com a imobiliária. Se alguma imagem não carregar, use “Galeria original” para consultar a publicação. Falha temporária de acesso não prova que o imóvel saiu do mercado.</div><footer class="footer">Radar de Casas CABA · Liniers, Mataderos, Villa Luro, Versalles, Vélez Sarsfield, Villa Devoto e Monte Castro · Atualizações e avaliações sincronizadas online.</footer></div><div id="toast" role="status"></div><div id="photoLightbox" role="dialog" aria-modal="true" aria-label="Galeria de fotos"><button class="close" id="closeLightbox" aria-label="Fechar">×</button><button class="largeNav largePrev" id="prevLightbox" aria-label="Foto anterior">‹</button><img id="lightboxImg" alt="Foto do imóvel"><button class="largeNav largeNext" id="nextLightbox" aria-label="Foto seguinte">›</button><div class="lbCaption" id="lbCaption"></div></div>
 <div id="sourceGalleryOverlay" role="dialog" aria-modal="true" aria-label="Galeria original da Maccaroni"><div class="sourceGalleryPanel"><header class="sourceGalleryHeader"><strong>Galeria original · Maccaroni</strong><a id="sourceGalleryLink" href="#" target="_blank" rel="noopener noreferrer">Abrir anúncio original ↗</a><button id="sourceGalleryClose" aria-label="Fechar galeria">✕ Fechar</button></header><iframe class="sourceGalleryFrame" id="sourceGalleryFrame" title="Galeria e detalhes da Maccaroni" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="sourceGalleryNote">Galeria incorporada do site original. Se a página ou as fotos não aparecerem, use “Abrir anúncio original”.</div></div></div>
@@ -328,8 +332,11 @@ function togglePrimaryFilters(){
  }
  render();
 }
-function showAllAgencyRecords(){
+function showAllAgencyRecords(preserveAgency){
  el('minBeds').value='';el('minRooms').value='';el('minArea').value='';el('maxArea').value='';
+ if(!preserveAgency)el('agencyFilter').value='';
+ el('search').value='';el('neighborhood').value='';el('propertyType').value='';
+ el('outdoor').checked=false;el('garage').checked=false;el('published15').checked=false;
  el('diagnosticMode').checked=true;render();
 }
 function canonicalAgency(v){
@@ -355,6 +362,17 @@ function render(){
  var recentOnly=!diagnostic&&el('published15').checked;
  var showSimilar=el('showSimilar').checked;
  var selectedAgency=el('agencyFilter').value;
+ var modeLabel=state.tab==='aluguel'?'aluguéis':'imóveis à venda';
+ var inventory=state.listings.filter(function(x){return x.mode===(state.tab==='venda'?'venda':'aluguel')});
+ var inactiveCount=inventory.filter(function(x){return x.listing_status==='inactive'}).length;
+ var missingPhotosCount=inventory.filter(function(x){return x.listing_status!=='inactive'&&!photosFor(x).length}).length;
+ var photoReadyCount=inventory.length-inactiveCount-missingPhotosCount;
+ el('showAllPreset').textContent='Ver todos os '+inventory.length+' cadastrados';
+ el('inventorySummary').innerHTML='<strong>'+inventory.length+' '+modeLabel+' cadastrados</strong>'+
+   '<span class="inventory-dot">·</span><strong>'+photoReadyCount+' exibíveis</strong>'+
+   '<span class="inventory-details">'+inactiveCount+' marcados inativos · '+missingPhotosCount+
+   ' sem fotos carregáveis · o filtro de dormitórios e área reduz ainda mais esse total. '+
+   (diagnostic?'Exibindo também inativos e sem fotos.':'Desative “Meu filtro principal” para ver os exibíveis, ou clique “Ver todos os cadastrados” para incluir também os ocultos.')+'</span>';
  var matchesAgency=function(x){return !selectedAgency||canonicalAgency(x.agency)===selectedAgency};
  var eligible=function(x){return (diagnostic||x.listing_status!=='inactive')&&(diagnostic||photosFor(x).length>0)&&(diagnostic||(meetsRoomsCriterion(x)&&meetsAreaCriterion(x)))&&(!recentOnly||publishedRecently(x))};
 
@@ -499,7 +517,7 @@ async function saveReview(id,patch){
 el('agencyCards').addEventListener('click',function(e){
  var b=e.target.closest('[data-testagency]');if(!b)return;
  setTab('aluguel');el('agencyFilter').value=b.dataset.testagency;
- showAllAgencyRecords();
+ showAllAgencyRecords(true);
  el('search').value='';el('neighborhood').value='';el('propertyType').value='';
  el('outdoor').checked=false;el('garage').checked=false;el('published15').checked=false;
  render();window.scrollTo({top:0,behavior:'smooth'});
@@ -508,7 +526,7 @@ document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click'
 ['search','neighborhood','propertyType','agencyFilter','diagnosticMode','order','outdoor','garage','published15','showSimilar','minBeds','minRooms','minArea','maxArea'].forEach(function(k){el(k).addEventListener('input',render)});
 ['minBeds','minRooms','minArea','maxArea'].forEach(function(k){el(k).addEventListener('input',function(){if(el('diagnosticMode').checked){el('diagnosticMode').checked=false;render()}})});
 el('mainPreset').addEventListener('click',togglePrimaryFilters);
-el('showAllPreset').addEventListener('click',showAllAgencyRecords);
+el('showAllPreset').addEventListener('click',function(){showAllAgencyRecords(false)});
 el('ownerBtn').addEventListener('click',async function(){if(state.ownerKey){var ok=await loadReviews();if(ok)toast('Sincronização conferida');return}await ensureOwner()});
 // Invalid photos are removed from the carousel instead of showing broken-image icons.
 el('cards').addEventListener('error',function(e){
