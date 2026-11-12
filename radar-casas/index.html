@@ -68,6 +68,10 @@
 .card .actions{margin-top:9px}.card .actions button{padding:8px 5px}.card .links{margin-top:7px}
 .card .note-expand{margin-top:7px}.card .note-expand summary{font-size:11px;color:var(--brand);font-weight:650;cursor:pointer}
 .card .note-expand textarea{min-height:62px;margin-top:6px}
+.agency-group{margin-top:17px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff}
+.agency-group>summary{font-size:14px;color:var(--brand);cursor:pointer;font-weight:700}
+.agency-group>.agencygrid{margin-top:13px}.agency-group .agent{background:var(--bg)}
+.agent button[data-testagency]{display:block;border:1px solid #b9d4c6;background:#eef8f0;color:var(--brand);border-radius:8px;padding:8px 10px;font-size:12px;font-weight:750;cursor:pointer;margin:10px 0 7px}
 .rent-budget-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 2px 0}
 .rent-budget-bar label{display:flex;gap:8px;align-items:center;font-weight:700;font-size:13px;color:var(--brand);cursor:pointer}
 .rent-budget-bar input{min-width:auto;width:16px;height:16px;accent-color:var(--brand)}
@@ -119,7 +123,9 @@
  </div>
  <div class="rent-budget-bar" id="rentBudgetBar"><label><input type="checkbox" id="rentBudgetEnabled" checked>Aluguel <span id="budgetLabel">US$ 600–1.200</span></label><span id="rentFxHelp">Convertendo para pesos pela cotação do dólar MEP…</span></div>
 </div><div class="inventory-summary" id="inventorySummary" role="status" aria-live="polite">Conferindo total de imóveis cadastrados…</div><div class="sectionhead"><h2 id="heading">Casas para alugar</h2><p id="subtitle">Carregando os imóveis</p></div><main class="cards" id="cards"><div class="blank">Buscando as opções...</div></main></div>
-<section id="agencyView" class="hidden"><div class="sectionhead"><h2>Imobiliárias da região</h2><p>Priorizamos pequenas corretoras e anúncios nos próprios sites.</p></div><div id="agencyCards" class="agencygrid"></div></section>
+<section id="agencyView" class="hidden"><div class="sectionhead"><h2>Imobiliárias da região</h2><p>Priorizamos pequenas corretoras e anúncios nos próprios sites.</p></div><div id="agencyCards" class="agencygrid"></div>
+ <details id="otherAgencyGroup" class="agency-group hidden"><summary>Outros anunciantes com imóveis no Radar (<span id="otherAgencyCount">0</span>)</summary><div id="otherAgencyCards" class="agencygrid"></div></details>
+ </section>
 <div class="notice"><strong>Sobre os anúncios:</strong> fotos e preços são informados pelas fontes. A disponibilidade ainda deve ser confirmada com a imobiliária. Se alguma imagem não carregar, use “Galeria original” para consultar a publicação. Falha temporária de acesso não prova que o imóvel saiu do mercado.</div><footer class="footer">Radar de Casas CABA · Liniers, Mataderos, Villa Luro, Versalles, Vélez Sarsfield, Villa Devoto e Monte Castro · Atualizações e avaliações sincronizadas online.</footer></div><div id="toast" role="status"></div><div id="photoLightbox" role="dialog" aria-modal="true" aria-label="Galeria de fotos"><button class="close" id="closeLightbox" aria-label="Fechar">×</button><button class="largeNav largePrev" id="prevLightbox" aria-label="Foto anterior">‹</button><img id="lightboxImg" alt="Foto do imóvel"><button class="largeNav largeNext" id="nextLightbox" aria-label="Foto seguinte">›</button><div class="lbCaption" id="lbCaption"></div></div>
 <div id="sourceGalleryOverlay" role="dialog" aria-modal="true" aria-label="Galeria original da Maccaroni"><div class="sourceGalleryPanel"><header class="sourceGalleryHeader"><strong>Galeria original · Maccaroni</strong><a id="sourceGalleryLink" href="#" target="_blank" rel="noopener noreferrer">Abrir anúncio original ↗</a><button id="sourceGalleryClose" aria-label="Fechar galeria">✕ Fechar</button></header><iframe class="sourceGalleryFrame" id="sourceGalleryFrame" title="Galeria e detalhes da Maccaroni" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="sourceGalleryNote">Galeria incorporada do site original. Se a página ou as fotos não aparecerem, use “Abrir anúncio original”.</div></div></div>
 <script>
@@ -434,7 +440,10 @@ function canonicalAgency(v){
  if(n==='Florencio Gonzalez Inmuebles')return 'Florencio González';
  if(n==='El Altillo')return 'El Altillo Inmuebles';
  if(n==='Inmobiliaria Fedele')return 'Fedele Inmobiliaria';
- return n;
+ if(n==='Dar Propiedades'||n==='D’AR Propiedades')return "D'AR Propiedades";
+ if(n==='Naccarato Propiedades (Villa Luro)')return 'Naccarato Propiedades';
+ if(n==='Mel Propiedades')return 'MEL Propiedades';
+ return n.replace(/\s+[1-5](?:[.,]\d)?\s*\([\d.]+\).*$/,'').trim();
 }
 function populateAgencyFilter(){
  var select=el('agencyFilter'),previous=select.value;
@@ -484,7 +493,11 @@ function render(){
     var name=canonicalAgency(a.name),before=agencyByName.get(name);
     if(!before||(a.audit_status==='links_found'&&before.audit_status!=='links_found')||Number(a.audit_links_found||0)>Number(before.audit_links_found||0))agencyByName.set(name,a);
    });
-   var agencyCards=Array.from(agencyByName.values()).sort(function(a,b){return canonicalAgency(a.name).localeCompare(canonicalAgency(b.name),'pt')}).map(function(a){
+   var agencyCards=Array.from(agencyByName.values()).sort(function(a,b){
+     var rentA=state.listings.filter(function(x){return canonicalAgency(x.agency)===canonicalAgency(a.name)&&x.mode==='aluguel'&&x.listing_status!=='inactive'}).length;
+     var rentB=state.listings.filter(function(x){return canonicalAgency(x.agency)===canonicalAgency(b.name)&&x.mode==='aluguel'&&x.listing_status!=='inactive'}).length;
+     return rentB-rentA||canonicalAgency(a.name).localeCompare(canonicalAgency(b.name),'pt');
+    }).map(function(a){
    var name=canonicalAgency(a.name),listings=state.listings.filter(function(x){return canonicalAgency(x.agency)===name});
    var rents=listings.filter(function(x){return x.mode==='aluguel'});
    var nonInactive=listings.filter(function(x){return x.listing_status!=='inactive'});
@@ -501,6 +514,31 @@ function render(){
     '<a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Ver anúncios na fonte ↗</a>'+auditHref+'</div>';
   });
   el('agencyCards').innerHTML=agencyCards.join('');
+  // Advertisers with real listings but without a verified independent
+  // agency homepage are visible separately, not mixed with official sites.
+  var missingByName=new Map();
+  state.listings.forEach(function(x){
+   if(!x.agency||!x.url||x.listing_status==='inactive')return;
+   var name=canonicalAgency(x.agency);
+   if(agencyByName.has(name))return;
+   var entry=missingByName.get(name)||{name:name,rents:0,sales:0,url:null,neighborhoods:new Set()};
+   if(x.mode==='aluguel')entry.rents++;else entry.sales++;
+   if(!entry.url)entry.url=x.url;
+   if(x.bairro)entry.neighborhoods.add(x.bairro);
+   missingByName.set(name,entry);
+  });
+  var otherAgencies=Array.from(missingByName.values()).sort(function(a,b){
+   return b.rents-a.rents||(b.rents+b.sales)-(a.rents+a.sales)||a.name.localeCompare(b.name,'pt');
+  });
+  el('otherAgencyCount').textContent=otherAgencies.length;
+  el('otherAgencyGroup').classList.toggle('hidden',otherAgencies.length===0);
+  el('otherAgencyCards').innerHTML=otherAgencies.map(function(a){
+   return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(Array.from(a.neighborhoods).join(' / '))+'</small>'+
+    '<div class="agency-data"><strong>Anúncios no Radar</strong><span>'+a.rents+' aluguel · '+a.sales+' venda</span></div>'+
+    '<div class="agency-data"><span>Encontrado nas publicações; site próprio ainda não verificado.</span></div>'+
+    '<button data-testagency="'+esc(a.name)+'" type="button">Ver imóveis deste anunciante</button>'+
+    '<a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Ver anúncio publicado ↗</a></div>';
+  }).join('');
   return;
  }
  var pool=state.tab==='favorites'?state.listings.concat(state.favoriteArchive):state.listings;
@@ -607,7 +645,7 @@ async function saveReview(id,patch){
   rebuildArchive();storeRatings();render();toast('✓ Escolha salva na nuvem');
  }catch(e){toast('Salvo neste aparelho · sincronização pendente')}
 }
-el('agencyCards').addEventListener('click',function(e){
+el('agencyView').addEventListener('click',function(e){
  var b=e.target.closest('[data-testagency]');if(!b)return;
  setTab('aluguel');el('agencyFilter').value=b.dataset.testagency;
  showAllAgencyRecords(true);
