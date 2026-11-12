@@ -232,8 +232,8 @@ with socketserver.TCPServer(("127.0.0.1",0),Quiet) as server:
         assert not budget_page.locator("#rentBudgetBar").is_visible()
         budget_page.locator('[data-tab="agencies"]').click()
         assert budget_page.locator("#otherAgencyGroup").is_visible(), "listing-only advertisers must be visible separately"
-        assert "New Broker" in budget_page.locator("#otherAgencyCards").inner_text()
         budget_page.locator("#otherAgencyGroup summary").click()
+        assert "New Broker" in budget_page.locator("#otherAgencyCards").inner_text()
         budget_page.locator('[data-testagency="New Broker"]').click()
         assert budget_page.locator("#agencyFilter").input_value()=="New Broker"
         assert budget_page.locator("#cards article.card").count()==1, "listing-only agency selection must show its source"
