@@ -219,6 +219,18 @@ function eligiblePhoto(u,id){
   return false;
  }catch(e){return false}
 }
+// Proppies renders unrelated recommended listings beside the active property's photo.
+// Only use images whose CDN directory matches the numeric ID of the listing URL.
+function isOwnListingPhoto(u,x){
+ try{
+  var source=new URL(x.url||'');
+  if(!/(^|\\.)proppies\\.app$/i.test(source.hostname))return true;
+  var id=source.pathname.match(/-(\\d+)\\/?$/);
+  if(!id)return false;
+  var pic=new URL(u);
+  return pic.protocol==='https:'&&pic.hostname==='cdn.proppies.app'&&pic.pathname.startsWith('/propiedad/'+id[1]+'/')&&/\\.(?:jpe?g|png|webp)$/i.test(pic.pathname);
+ }catch(e){return false}
+}
 function tryPhoto(url){return new Promise(function(done){var img=new Image();var ended=false;var timer=setTimeout(function(){if(!ended){ended=true;done(false)}},12000);img.onload=function(){if(ended)return;ended=true;clearTimeout(timer);done(img.naturalWidth>250&&img.naturalHeight>180)};img.onerror=function(){if(ended)return;ended=true;clearTimeout(timer);done(false)};img.src=url})}
 var photoRenderTimer=null;
 function schedulePhotoRender(){
@@ -232,7 +244,7 @@ async function verifyAllPhotos(){
  async function work(){
   while(queue.length){
    var x=queue.shift();
-   var candidates=Array.from(new Set((Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]).filter(function(v){return typeof v==='string'&&/^https:\/\//.test(v)})));
+   var candidates=Array.from(new Set((Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]).filter(function(v){return typeof v==='string'&&/^https:\/\//.test(v)&&isOwnListingPhoto(v,x)})));
    if(!candidates.length){verifiedImageCache[x.id]=[];schedulePhotoRender();continue}
    var valid=null;
    for(var i=0;i<Math.min(candidates.length,4);i++){
@@ -271,7 +283,7 @@ async function loadMorePhotos(id){
  finally{photoDiscoveryPending.delete(id);photoDiscoveryDone.add(id);render()}
 }
 
-function photosFor(x){var validated=Object.prototype.hasOwnProperty.call(verifiedImageCache,x.id);var photos=validated?verifiedImageCache[x.id]:(Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]);return Array.from(new Set(photos.filter(function(u){return typeof u==='string'&&/^https:\/\//.test(u)})))}
+function photosFor(x){var validated=Object.prototype.hasOwnProperty.call(verifiedImageCache,x.id);var photos=validated?verifiedImageCache[x.id]:(Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]);return Array.from(new Set(photos.filter(function(u){return typeof u==='string'&&/^https:\/\//.test(u)&&isOwnListingPhoto(u,x)})))}
 function setCardSlide(id,step){var x=item(id);if(!x)return;var photos=photosFor(x);if(!photos.length)return;photoIndexes[id]=((photoIndexes[id]||0)+step+photos.length)%photos.length;var card=Array.from(document.querySelectorAll('.card')).find(function(n){return n.querySelector('[data-id="'+id+'"]')});if(!card)return;card.querySelectorAll('[data-slide]').forEach(function(img){img.hidden=Number(img.dataset.slide)!==photoIndexes[id]});var n=card.querySelector('[data-count]');if(n)n.textContent=(photoIndexes[id]+1)+' / '+photos.length}
 var lightboxId='';
 function updateLightbox(){var x=item(lightboxId),photos=x?photosFor(x):[];if(!photos.length)return;var i=photoIndexes[lightboxId]||0;el('lightboxImg').src=photos[i];el('lbCaption').textContent=x.address+' · '+(i+1)+' de '+photos.length;el('prevLightbox').style.display=el('nextLightbox').style.display=photos.length>1?'block':'none'}
