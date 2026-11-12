@@ -65,6 +65,40 @@ class AgencyCatalogDiscoveryTests(unittest.TestCase):
             self.assertIn(detail,candidates(None,base))
 
 
+    def test_new_agency_catalogue_discovery(self):
+        samples = [
+            ("https://www.yacopino.com.ar/", "/busqueda-de-propiedades-en-alquiler",
+             "https://www.yacopino.com.ar/propiedad-6980237-ecuador-al-900-departamento-en-alquiler-en-balvanera"),
+            ("https://liottopropiedades.com.ar/", "/property-type/alquiler/",
+             "https://liottopropiedades.com.ar/listings/ph-amplio-en-monte-castro/"),
+            ("https://www.fjlujan.com.ar/", "/Alquiler",
+             "https://www.fjlujan.com.ar/p/4476558-Departamento-en-Alquiler-en-Mataderos-Murguiondo-1500"),
+            ("https://www.diconspropiedades.com/", "/Alquiler",
+             "https://www.diconspropiedades.com/p/1234567-PH-en-Alquiler-en-Villa-Luro"),
+        ]
+        for base, catalogue, detail in samples:
+            with self.subTest(base=base):
+                def fake_fetch(_session, url):
+                    if url == base.rstrip("/") + catalogue:
+                        return '<html><a href="' + detail + '">Anuncio próprio</a></html>'
+                    return ""
+                with patch("collector.fetch", side_effect=fake_fetch):
+                    found = candidates(None, base, limit=20)
+                self.assertIn(detail, found)
+
+    def test_gamez_query_identifies_individual_property(self):
+        base = "https://www.gamezpropiedades.com.ar/"
+        def fake_fetch(_session, url):
+            if url == base:
+                return '<a href="/propiedad.asp?idpropiedad=501">A</a><a href="/propiedad.asp?idpropiedad=502">B</a>'
+            return ""
+        with patch("collector.fetch", side_effect=fake_fetch):
+            found = candidates(None, base, limit=20)
+        self.assertIn(base + "propiedad.asp?idpropiedad=501", found)
+        self.assertIn(base + "propiedad.asp?idpropiedad=502", found)
+        self.assertEqual(len(found), 2)
+
+
 class PropertyParsingTests(unittest.TestCase):
     def test_eligible_four_ambientes(self):
         html=page("Casa 4 ambientes en alquiler en Monte Castro", "Lascano 5055, Monte Castro. $ 1.800.000. 3 dormitorios. Superficie total 220 m². Patio y terraza.")
