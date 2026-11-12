@@ -116,7 +116,7 @@
     <label class="check"><input id="published15" type="checkbox"> Publicados nos últimos 15 dias</label>
     <label class="check"><input id="showSimilar" type="checkbox"> Mostrar semelhantes</label>
     <div class="filter-diagnostic">
-     <label class="check"><input id="diagnosticMode" type="checkbox"> Incluir inativos e ignorar preferências</label>
+     <label class="check"><input id="diagnosticMode" type="checkbox"> Ignorar filtros (retirados continuam ocultos)</label>
     </div>
    </div>
   </details>
@@ -465,18 +465,19 @@ function render(){
  var inventory=state.listings.filter(function(x){return x.mode===(state.tab==='venda'?'venda':'aluguel')});
  var inactiveCount=inventory.filter(function(x){return x.listing_status==='inactive'}).length;
  var missingPhotosCount=inventory.filter(function(x){return x.listing_status!=='inactive'&&!photosFor(x).length}).length;
- var photoReadyCount=inventory.length-inactiveCount-missingPhotosCount;
+ var notRemovedCount=inventory.length-inactiveCount;
+ var photoReadyCount=notRemovedCount-missingPhotosCount;
  var browseMode=state.tab==='aluguel'||state.tab==='venda';
  el('inventorySummary').classList.toggle('hidden',!browseMode);
  el('showAllPreset').classList.toggle('hidden',!browseMode);
- el('showAllPreset').textContent='Ver todos os '+inventory.length+' cadastrados';
- el('inventorySummary').innerHTML='<strong>'+inventory.length+' '+modeLabel+' cadastrados</strong>'+
-   '<span class="inventory-dot">·</span><strong>'+photoReadyCount+' exibíveis</strong>'+
-   '<span class="inventory-details">'+inactiveCount+' marcados inativos · '+missingPhotosCount+
-   ' sem fotos carregáveis · os filtros de dormitórios, área e orçamento podem reduzir esse total. '+
-   (diagnostic?'Exibindo também inativos e sem fotos.':'Desative “Meu filtro principal” para ver os exibíveis, ou clique “Ver todos os cadastrados” para incluir também os ocultos.')+'</span>';
+ el('showAllPreset').textContent='Ver todos os '+notRemovedCount+' não retirados';
+ el('inventorySummary').innerHTML='<strong>'+notRemovedCount+' '+modeLabel+' não retirados</strong>'+
+   '<span class="inventory-dot">·</span><strong>'+photoReadyCount+' com fotos</strong>'+
+   '<span class="inventory-details">'+inactiveCount+' retirados e ocultos · '+missingPhotosCount+
+   ' sem fotos carregáveis · filtros de dormitórios, área e preço podem reduzir esse total. '+
+   (diagnostic?'Filtros ignorados; anúncios retirados permanecem ocultos.':'Desative “Meu filtro principal” para ver mais imóveis, ou clique “Ver todos os não retirados” para incluir os sem fotos.')+'</span>';
  var matchesAgency=function(x){return !selectedAgency||canonicalAgency(x.agency)===selectedAgency};
- var eligible=function(x){return (diagnostic||x.listing_status!=='inactive')&&(diagnostic||photosFor(x).length>0)&&(diagnostic||(meetsRoomsCriterion(x)&&meetsAreaCriterion(x)&&withinRentBudget(x)))&&(!recentOnly||publishedRecently(x))};
+ var eligible=function(x){return x.listing_status!=='inactive'&&(diagnostic||photosFor(x).length>0)&&(diagnostic||(meetsRoomsCriterion(x)&&meetsAreaCriterion(x)&&withinRentBudget(x)))&&(!recentOnly||publishedRecently(x))};
 
  var visible=function(x){return eligible(x)&&(diagnostic||(!isDiscarded(x)&&(showSimilar||!isSuppressed(x))))};
  el('rentCount').textContent=state.listings.filter(function(x){return x.mode==='aluguel'&&visible(x)&&matchesAgency(x)}).length;
@@ -567,12 +568,12 @@ function render(){
   return (order==='low'?av-bv:(a.price==null?Infinity:-av)-(b.price==null?Infinity:-bv))||byFound(a,b);
  });
  el('heading').textContent=state.tab==='venda'?'Imóveis à venda':state.tab==='favorites'?'Seus imóveis favoritos':state.tab==='rejected'?'Descartados e ocultados por preferências':'Imóveis para alugar';
- var modeBase=state.listings.filter(function(x){return x.mode===state.tab&&matchesAgency(x)});
+ var modeBase=state.listings.filter(function(x){return x.mode===state.tab&&x.listing_status!=='inactive'&&matchesAgency(x)});
  var byRooms=modeBase.filter(meetsRoomsCriterion);
  var excludedRooms=modeBase.length-byRooms.length;
  var excludedArea=byRooms.filter(function(x){return !meetsAreaCriterion(x)}).length;
  var msg=arr.length+' imóveis · '+(selectedAgency?selectedAgency+' · ':'')+(diagnostic?'Modo teste: todos os anúncios cadastrados':roomFilterText()+(el('minArea').value?' · '+el('minArea').value+' m² mín.':'')+(state.tab==='aluguel'&&budgetEnabled()?' · '+el('budgetLabel').textContent:''));
- if(diagnostic)msg+=' · '+modeBase.length+' fichas no banco (inclusive inativas)';
+ if(diagnostic)msg+=' · '+modeBase.length+' fichas não retiradas';
  if(recentOnly)msg+=' · Publicação original nos últimos 15 dias';
  if(recentOnly&&!state.listings.some(function(x){return publishedRecently(x)}))msg='Ainda não há anúncios com data ORIGINAL de publicação comprovada nos últimos 15 dias. A data de descoberta pelo radar não é usada como publicação.';
  if(!photosChecked)msg+=' · Verificando fotografias em paralelo';
