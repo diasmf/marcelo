@@ -66,7 +66,7 @@
  </div>
 </div><div class="sectionhead"><h2 id="heading">Casas para alugar</h2><p id="subtitle">Carregando os imóveis</p></div><main class="cards" id="cards"><div class="blank">Buscando as opções...</div></main></div>
 <section id="agencyView" class="hidden"><div class="sectionhead"><h2>Imobiliárias da região</h2><p>Priorizamos pequenas corretoras e anúncios nos próprios sites.</p></div><div id="agencyCards" class="agencygrid"></div></section>
-<div class="notice"><strong>Fotos:</strong> use as setas ‹ › para navegar sem sair do Radar. Em algumas fontes aparece o botão “Buscar mais fotos”, que tenta recuperar imagens adicionais do anúncio original. Se houver apenas uma foto, o link “Todas as fotos” abre a galeria no site da imobiliária. Para fontes que só oferecem a imagem principal à coleta (como a Maccaroni), a galeria original continua acessível pelo link; não mostramos imagens que não conseguimos recuperar.</div><div class="notice">Uma falha temporária ao consultar o site original não comprova que o anúncio foi removido. Anúncios só devem ser marcados inativos mediante evidência de retirada, e a disponibilidade precisa ser confirmada com a imobiliária.</div><div class="notice">Anúncios podem sair do ar ou ter preços alterados. A disponibilidade ainda não foi confirmada com os anunciantes. Imóveis pendentes de confirmação também aparecem no Radar, identificados como tais; imóveis inativos continuam ocultos. As fotografias são verificadas progressivamente e podem falhar em algumas fontes. Confirme detalhes e disponibilidade diretamente com a imobiliária.</div><footer class="footer">Radar de Casas CABA · Liniers, Mataderos, Villa Luro, Versalles, Vélez Sarsfield, Villa Devoto e Monte Castro · Atualizações e avaliações sincronizadas online.</footer></div><div id="toast" role="status"></div><div id="photoLightbox" role="dialog" aria-modal="true" aria-label="Galeria de fotos"><button class="close" id="closeLightbox" aria-label="Fechar">×</button><button class="largeNav largePrev" id="prevLightbox" aria-label="Foto anterior">‹</button><img id="lightboxImg" alt="Foto do imóvel"><button class="largeNav largeNext" id="nextLightbox" aria-label="Foto seguinte">›</button><div class="lbCaption" id="lbCaption"></div></div>
+<div class="notice"><strong>Sobre os anúncios:</strong> fotos e preços são informados pelas fontes. A disponibilidade ainda deve ser confirmada com a imobiliária. Se alguma imagem não carregar, use “Galeria original” para consultar a publicação. Falha temporária de acesso não prova que o imóvel saiu do mercado.</div><footer class="footer">Radar de Casas CABA · Liniers, Mataderos, Villa Luro, Versalles, Vélez Sarsfield, Villa Devoto e Monte Castro · Atualizações e avaliações sincronizadas online.</footer></div><div id="toast" role="status"></div><div id="photoLightbox" role="dialog" aria-modal="true" aria-label="Galeria de fotos"><button class="close" id="closeLightbox" aria-label="Fechar">×</button><button class="largeNav largePrev" id="prevLightbox" aria-label="Foto anterior">‹</button><img id="lightboxImg" alt="Foto do imóvel"><button class="largeNav largeNext" id="nextLightbox" aria-label="Foto seguinte">›</button><div class="lbCaption" id="lbCaption"></div></div>
 <div id="sourceGalleryOverlay" role="dialog" aria-modal="true" aria-label="Galeria original da Maccaroni"><div class="sourceGalleryPanel"><header class="sourceGalleryHeader"><strong>Galeria original · Maccaroni</strong><a id="sourceGalleryLink" href="#" target="_blank" rel="noopener noreferrer">Abrir anúncio original ↗</a><button id="sourceGalleryClose" aria-label="Fechar galeria">✕ Fechar</button></header><iframe class="sourceGalleryFrame" id="sourceGalleryFrame" title="Galeria e detalhes da Maccaroni" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe><div class="sourceGalleryNote">Galeria incorporada do site original. Se a página ou as fotos não aparecerem, use “Abrir anúncio original”.</div></div></div>
 <script>
 (function(){
@@ -160,6 +160,11 @@ function eligiblePhoto(u,id){
  }catch(e){return false}
 }
 function tryPhoto(url){return new Promise(function(done){var img=new Image();var ended=false;var timer=setTimeout(function(){if(!ended){ended=true;done(false)}},12000);img.onload=function(){if(ended)return;ended=true;clearTimeout(timer);done(img.naturalWidth>250&&img.naturalHeight>180)};img.onerror=function(){if(ended)return;ended=true;clearTimeout(timer);done(false)};img.src=url})}
+var photoRenderTimer=null;
+function schedulePhotoRender(){
+ if(photoRenderTimer!==null)return;
+ photoRenderTimer=setTimeout(function(){photoRenderTimer=null;render()},450);
+}
 async function verifyAllPhotos(){
  photosChecked=false;
  render();
@@ -168,17 +173,18 @@ async function verifyAllPhotos(){
   while(queue.length){
    var x=queue.shift();
    var candidates=Array.from(new Set((Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]).filter(function(v){return typeof v==='string'&&/^https:\/\//.test(v)})));
-   verifiedImageCache[x.id]=[];
-   for(var i=0;i<Math.min(candidates.length,3);i++){
-    if(await tryPhoto(candidates[i])){
-     verifiedImageCache[x.id]=[candidates[i]].concat(candidates.filter(function(u){return u!==candidates[i]}));
-     render();break;
-    }
+   if(!candidates.length){verifiedImageCache[x.id]=[];schedulePhotoRender();continue}
+   var valid=null;
+   for(var i=0;i<Math.min(candidates.length,4);i++){
+    if(await tryPhoto(candidates[i])){valid=candidates[i];break}
    }
+   verifiedImageCache[x.id]=valid?[valid].concat(candidates.filter(function(u){return u!==valid})):[];
+   schedulePhotoRender();
   }
  }
  await Promise.all(Array.from({length:6},work));
  photosChecked=true;
+ if(photoRenderTimer!==null){clearTimeout(photoRenderTimer);photoRenderTimer=null}
  render();
 }
 var photoIndexes={};
@@ -205,7 +211,7 @@ async function loadMorePhotos(id){
  finally{photoDiscoveryPending.delete(id);photoDiscoveryDone.add(id);render()}
 }
 
-function photosFor(x){var checked=verifiedImageCache[x.id];var photos=checked&&checked.length?checked:(Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]);return Array.from(new Set(photos.filter(function(u){return typeof u==='string'&&/^https:\/\//.test(u)})))}
+function photosFor(x){var validated=Object.prototype.hasOwnProperty.call(verifiedImageCache,x.id);var photos=validated?verifiedImageCache[x.id]:(Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]);return Array.from(new Set(photos.filter(function(u){return typeof u==='string'&&/^https:\/\//.test(u)})))}
 function setCardSlide(id,step){var x=item(id);if(!x)return;var photos=photosFor(x);if(!photos.length)return;photoIndexes[id]=((photoIndexes[id]||0)+step+photos.length)%photos.length;var card=Array.from(document.querySelectorAll('.card')).find(function(n){return n.querySelector('[data-id="'+id+'"]')});if(!card)return;card.querySelectorAll('[data-slide]').forEach(function(img){img.hidden=Number(img.dataset.slide)!==photoIndexes[id]});var n=card.querySelector('[data-count]');if(n)n.textContent=(photoIndexes[id]+1)+' / '+photos.length}
 var lightboxId='';
 function updateLightbox(){var x=item(lightboxId),photos=x?photosFor(x):[];if(!photos.length)return;var i=photoIndexes[lightboxId]||0;el('lightboxImg').src=photos[i];el('lbCaption').textContent=x.address+' · '+(i+1)+' de '+photos.length;el('prevLightbox').style.display=el('nextLightbox').style.display=photos.length>1?'block':'none'}
@@ -350,7 +356,7 @@ function render(){
  var showSimilar=el('showSimilar').checked;
  var selectedAgency=el('agencyFilter').value;
  var matchesAgency=function(x){return !selectedAgency||canonicalAgency(x.agency)===selectedAgency};
- var eligible=function(x){return (diagnostic||x.listing_status!=='inactive')&&(diagnostic||(meetsRoomsCriterion(x)&&meetsAreaCriterion(x)))&&(!recentOnly||publishedRecently(x))};
+ var eligible=function(x){return (diagnostic||x.listing_status!=='inactive')&&(diagnostic||photosFor(x).length>0)&&(diagnostic||(meetsRoomsCriterion(x)&&meetsAreaCriterion(x)))&&(!recentOnly||publishedRecently(x))};
 
  var visible=function(x){return eligible(x)&&(diagnostic||(!isDiscarded(x)&&(showSimilar||!isSuppressed(x))))};
  el('rentCount').textContent=state.listings.filter(function(x){return x.mode==='aluguel'&&visible(x)&&matchesAgency(x)}).length;
@@ -362,17 +368,22 @@ function render(){
  var syncText=(!state.ownerKey&&choices)?'♡ '+choices+' favorito(s) neste aparelho. Toque em "Sincronizar escolhas" para guardar na nuvem.':(state.ownerKey&&pending?'Algumas escolhas aguardam sincronização com a nuvem.':'');
  el('syncStatus').textContent=syncText;el('syncStatus').classList.toggle('hidden',!syncText);
  if(state.tab==='agencies'){
-  var agencyCards=state.agencies.map(function(a){
+  var agencyByName=new Map();
+   state.agencies.forEach(function(a){
+    var name=canonicalAgency(a.name),before=agencyByName.get(name);
+    if(!before||(a.audit_status==='links_found'&&before.audit_status!=='links_found')||Number(a.audit_links_found||0)>Number(before.audit_links_found||0))agencyByName.set(name,a);
+   });
+   var agencyCards=Array.from(agencyByName.values()).sort(function(a,b){return canonicalAgency(a.name).localeCompare(canonicalAgency(b.name),'pt')}).map(function(a){
    var name=canonicalAgency(a.name),listings=state.listings.filter(function(x){return canonicalAgency(x.agency)===name});
    var rents=listings.filter(function(x){return x.mode==='aluguel'});
-   var nonInactive=rents.filter(function(x){return x.listing_status!=='inactive'});
+   var nonInactive=listings.filter(function(x){return x.listing_status!=='inactive'});
    var status=a.audit_status||'not_checked',found=Number(a.audit_links_found||0);
    var statusLabel=status==='links_found'?'Links identificados (coleta parcial)':status==='unreachable'?'Falha de acesso no teste':status==='no_links'?'Nenhum link detectado (ainda não validado)':'Ainda sem teste registrado';
    var when=a.audit_checked_at?new Date(a.audit_checked_at).toLocaleDateString('pt-BR'):'';
    var auditExtra=status==='links_found'?' · '+found+' links encontrados':(status==='unreachable'?' · verificar acesso à fonte':' · não significa ausência de imóveis');
    var auditHref=a.audit_run_url?'<a href="'+safeUrl(a.audit_run_url)+'" target="_blank" rel="noopener noreferrer">Ver relatório da coleta ↗</a>':'';
    return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(a.bairro)+'</small>'+
-    '<div class="agency-data"><strong>Anúncios no Radar</strong><span>'+listings.length+' fichas cadastradas · '+rents.length+' aluguéis ('+nonInactive.length+' não inativos)</span></div>'+
+    '<div class="agency-data"><strong>Anúncios no Radar</strong><span>'+listings.length+' anúncios cadastrados · '+rents.length+' aluguel · '+(listings.length-rents.length)+' venda · '+nonInactive.length+' não marcados inativos</span></div>'+
     '<div class="agency-data"><strong>Coleta verificada</strong><span>'+esc(statusLabel)+esc(auditExtra)+(when?' · '+esc(when):'')+'</span></div>'+
     (listings.length===0?'<small>Zero fichas cadastradas não significa zero anúncios no mercado.</small>':'')+
     '<button data-testagency="'+esc(name)+'" type="button">Ver imóveis desta imobiliária</button>'+
@@ -420,7 +431,7 @@ function render(){
 el('cards').innerHTML=arr.length?arr.map(function(x){var r=state.ratings[x.id]||{};var images=photosFor(x);var activeImage=(photoIndexes[x.id]||0)%Math.max(images.length,1);var pic=images.length?images.map(function(url,i){return '<img class="slide" data-slide="'+i+'" src="'+(safeUrl(url))+'" alt="Foto '+(i+1)+' de '+esc(x.address)+'" loading="lazy" '+(i!==activeImage?'hidden':'')+'>'}).join('')+'<button class="zoom" data-zoom="'+esc(x.id)+'" aria-label="Ampliar foto">⤢ Ampliar</button>'+(images.length>1?'<button class="photo-nav photo-prev" data-advance="-1" data-id="'+esc(x.id)+'" aria-label="Foto anterior">‹</button><button class="photo-nav photo-next" data-advance="1" data-id="'+esc(x.id)+'" aria-label="Próxima foto">›</button><span class="photo-count" data-count="'+esc(x.id)+'">'+(activeImage+1)+' / '+images.length+'</span>':'<span class="one-photo-notice" title="Só temos a foto principal; veja a galeria completa no anúncio original">1 foto no Radar · Galeria no site ↗</span>')+(images.length<=2&&!x.archived&&supportsPhotoDiscovery(x)&&!photoDiscoveryDone.has(x.id)?'<button class="photo-more" data-expand="'+esc(x.id)+'" '+(photoDiscoveryPending.has(x.id)?'disabled':'')+'>'+(photoDiscoveryPending.has(x.id)?'Buscando fotos…':'+ Buscar mais fotos')+'</button>':''): '<div class="placeholder">'+houseIcon()+'<span>Fotos ainda não cadastradas</span></div>';return '<article class="card"><div class="photo">'+pic+'<span class="pill">'+esc(x.archived?'Favorito salvo · verificar disponibilidade':x.listing_status==='inactive'?'INATIVO · NÃO DISPONÍVEL':(x.tag||x.tipo))+'</span><a class="gallery" target="_blank" rel="noopener noreferrer" href="'+safeUrl(x.url)+'">▧ Galeria original ↗</a></div><div class="body">'+'<div class="sub">'+esc(x.bairro)+' · '+esc(x.tipo)+' · '+(x.mode==='venda'?'Venda':'Aluguel')+(positiveMatch(x)>=10?' · ♥ Parecido com seus favoritos':'')+'</div><div class="address">'+esc(x.address)+'</div><div class="listing-location">⌖ <strong>Localização:</strong> '+esc(locationFor(x))+(locationFor(x)===(x.bairro+', CABA')?' · Rua/número não informados':'')+'</div><div class="price">'+money(x)+'</div><div class="facts"><span>▤ '+esc(validBedrooms(x)===null?'Dorm. não confirmado':validBedrooms(x)+' dorm.')+'</span>'+(roomsFromDescription(x)?'<span>◧ '+roomsFromDescription(x)+' ambientes</span>':'')+(x.area?'<span>◫ '+esc(x.area)+' m²</span>':'')+(x.patio?'<span>♧ Pátio/terraço</span>':'')+(x.garage?'<span>▣ Garagem</span>':'')+'</div><div class="detail">'+esc(x.detail)+'</div><div class="listing-date">'+(dateBR(x.published_at)?'<strong>Publicado no portal: '+dateBR(x.published_at)+'</strong> · ':'')+(dateBR(x.discovered_at)?'Encontrado pelo radar: '+dateBR(x.discovered_at):'Publicação original: não informada')+'</div><div class="agency">⌂ '+esc(x.agency)+'</div><div class="status">'+(x.listing_status==='inactive'?'⚠ Registro inativo; só aparece para diagnóstico.':'ℹ Anúncio encontrado na fonte (disponibilidade a confirmar)')+''+(x.status_checked_at?' em '+new Date(x.status_checked_at).toLocaleDateString("pt-BR"):'')+' · Disponibilidade a confirmar com a imobiliária.</div><div class="actions"><button data-rating="like" data-id="'+esc(x.id)+'" class="'+(r.rating==='like'?'active':'')+'">♡ Gostei</button><button data-rating="reject" data-id="'+esc(x.id)+'" class="'+(r.rating==='reject'?'reject':'')+'">✕ Não gostei</button></div><textarea data-note="'+esc(x.id)+'" placeholder="O que gostou ou não gostou?">'+esc(r.note||'')+'</textarea><div class="links"><a href="'+safeUrl(x.url)+'" target="_blank" rel="noopener noreferrer">Anúncio original ↗</a><a href="https://www.google.com/maps/search/?api=1&amp;query='+encodeURIComponent(locationFor(x))+'" target="_blank" rel="noopener noreferrer">⌖ Mapa</a></div></div></article>'}).join('') :'<div class="blank">'+(state.tab==='aluguel'?'Nenhum aluguel atende aos filtros atuais.':'Nenhum imóvel à venda atende aos filtros atuais.')+'</div>';
 }
 async function fetchJson(path,options){var response=await fetch(BASE+path,options||{});var json=await response.json().catch(function(){return {error:'Erro de resposta do servidor'}});if(!response.ok)throw Error(json.error||'Erro ao carregar');return json}
-async function load(){try{var res=await fetchJson('/api/listings');state.listings=res.listings||[];state.agencies=res.agencies||[];populateAgencyFilter();cacheFavouriteSnapshots();rebuildLearning();el('state').textContent='Radar online · '+new Date().toLocaleDateString('pt-BR');verifyAllPhotos();await loadReviews()}catch(e){el('cards').innerHTML='<div class="blank">Erro ao carregar os imóveis. Atualize a página.</div>';el('state').textContent='Falha ao carregar';toast(e.message)}}
+async function load(){try{var res=await fetchJson('/api/listings');state.listings=res.listings||[];state.agencies=res.agencies||[];populateAgencyFilter();cacheFavouriteSnapshots();rebuildLearning();var latest=state.listings.reduce(function(n,x){return Math.max(n,Date.parse(x.updated_at||'')||0)},0);el('state').textContent='Radar online'+(latest?' · última alteração '+new Date(latest).toLocaleDateString('pt-BR'):'');verifyAllPhotos();await loadReviews()}catch(e){el('cards').innerHTML='<div class="blank">Erro ao carregar os imóveis. Atualize a página.</div>';el('state').textContent='Falha ao carregar';toast(e.message)}}
 async function loadReviews(){
  if(!state.ownerKey){rebuildArchive();render();return false}
  try{
@@ -499,6 +510,20 @@ document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click'
 el('mainPreset').addEventListener('click',togglePrimaryFilters);
 el('showAllPreset').addEventListener('click',showAllAgencyRecords);
 el('ownerBtn').addEventListener('click',async function(){if(state.ownerKey){var ok=await loadReviews();if(ok)toast('Sincronização conferida');return}await ensureOwner()});
+// Invalid photos are removed from the carousel instead of showing broken-image icons.
+el('cards').addEventListener('error',function(e){
+ var img=e.target;
+ if(!img||!img.matches||!img.matches('img[data-slide]'))return;
+ var card=img.closest('.card'),zoom=card&&card.querySelector('[data-zoom]');
+ if(!zoom)return;
+ var id=zoom.dataset.zoom,x=item(id),url=img.getAttribute('src');
+ if(!x)return;
+ var photos=photosFor(x),filtered=photos.filter(function(u){return u!==url});
+ if(filtered.length===photos.length)return;
+ verifiedImageCache[id]=filtered;
+ if((photoIndexes[id]||0)>=filtered.length)photoIndexes[id]=0;
+ schedulePhotoRender();
+},true);
 el('cards').addEventListener('click',function(e){var a=e.target.closest('[data-advance]');if(a){setCardSlide(a.dataset.id,Number(a.dataset.advance));return}var image=e.target.closest('img[data-slide]');if(image){if(Date.now()-lastCardSwipeAt<700)return;var imageCard=image.closest('.card'),next=imageCard&&imageCard.querySelector('[data-advance][data-id]'),single=imageCard&&imageCard.querySelector('[data-zoom]');if(next&&photosFor(item(next.dataset.id)).length>1)setCardSlide(next.dataset.id,1);else if(single)openLightbox(single.dataset.zoom);return}var embed=e.target.closest('[data-sourcegallery]');if(embed){openSourceGallery(embed.dataset.sourcegallery);return}var more=e.target.closest('[data-expand]');if(more){loadMorePhotos(more.dataset.expand);return}var z=e.target.closest('[data-zoom]');if(z){openLightbox(z.dataset.zoom);return}var t=e.target.closest('[data-rating]');if(t){var id=t.getAttribute('data-id'),what=t.getAttribute('data-rating');saveReview(id,{rating:(state.ratings[id]||{}).rating===what?'':what})}});
 el('cards').addEventListener('change',function(e){var t=e.target.closest('[data-note]');if(t)saveReview(t.getAttribute('data-note'),{note:t.value.slice(0,1200)})});
 load();
