@@ -55,8 +55,26 @@ SOURCES = {
     "Fedele Inmobiliaria": "https://www.argenprop.com/inmobiliarias/fedele-inmobiliaria/ph",
     "Todoroff Propiedades": "https://www.argenprop.com/inmobiliarias/todoroff-propiedades/inmuebles/mataderos",
     "Florencio Gonzalez Inmuebles": "https://florenciogonzalez.com.ar/",
+    # Catalogued agencies now included in the collector.
+    "Naccarato Propiedades": "https://www.naccaratopropiedades.com.ar/propiedades/",
+    "Maqueda Propiedades": "https://www.maqueda.com.ar/propiedades",
+    "Roman Propiedades": "https://inmobiliariaroman.com.ar/",
+    "Paladino Negocios Inmobiliarios": "https://www.paladinoprop.com.ar/estado/en-alquiler/",
+    "Jose Pintimalli Propiedades": "https://www.josepintimalli.com.ar/Buscar",
+    "Werba Inmuebles": "https://www.werba.com.ar/",
+    "Ing. E. A. Villamil Propiedades": "https://www.ingenierovillamil.com.ar/",
+    # Nine newly added independent real-estate agencies in western CABA.
+    "Gentile Inmuebles": "https://gentileinmuebles.com/",
+    "Amalfitani Inmuebles": "https://www.amalfitani.com.ar/",
+    "Yacopino Inmobiliarias": "https://www.yacopino.com.ar/",
+    "Dicons Propiedades": "https://www.diconspropiedades.com/",
+    "Liotto Propiedades": "https://liottopropiedades.com.ar/",
+    "FJ Lujan Propiedades": "https://www.fjlujan.com.ar/",
+    "Gamez Propiedades": "https://www.gamezpropiedades.com.ar/",
+    "Norde Propiedades": "https://www.nordepropiedades.com.ar/",
+    "Tizado Villa Luro": "https://www.tizado.com/",
 }
-PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|properties/(?:departamento|casa|ph)/[^/?#]+/[^/?#]+|vitalefeol-\d+|(?:casa|ph|departamento)-en-(?:alquiler|venta)-en-[^/?#]+)", re.I)
+PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|properties/(?:departamento|casa|ph)/[^/?#]+/[^/?#]+|listings/[^/?#]+|propiedad-\d+-[^/?#]+|ficha/[^/?#]+|propiedad\.asp|vitalefeol-\d+|(?:casa|ph|departamento)-en-(?:alquiler|venta)-en-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
 SOLD = re.compile(r"\b(?:alquilado|alquilada|reservado|reservada|vendido|vendida|no disponible|suspendido|suspendida)\b", re.I)
 SALE_ONLY = re.compile(r"\b(?:en venta|venta de|se vende)\b", re.I)
@@ -70,7 +88,13 @@ HEADERS = {"User-Agent": "RadarCABA/1.0 (+public listing index; limited requests
 
 def clean_url(url):
     p = urlsplit(url)
-    return urlunsplit((p.scheme, p.netloc.lower(), p.path.rstrip("/") or "/", "", ""))
+    query = ""
+    # Preserve the listing identifier on Gamez's propiedad.asp URLs.
+    if "gamezpropiedades.com.ar" in p.netloc.lower() and p.path.lower().endswith("/propiedad.asp"):
+        match = re.search(r"(?:^|&)idpropiedad=(\d+)", p.query, re.I)
+        if match:
+            query = "idpropiedad=" + match.group(1)
+    return urlunsplit((p.scheme, p.netloc.lower(), p.path.rstrip("/") or "/", query, ""))
 
 
 def fetch(session, url):
@@ -120,6 +144,38 @@ def candidates(session, base, limit=50):
         category_paths = ["/Alquiler", "/Casas", "/PHs", "/Departamentos"]
     elif "maccaroni.com.ar" in host:
         category_paths = ["/propiedades?ope=A", "/propiedades?ope=A&tipo=C", "/propiedades?ope=A&tipo=P", "/propiedades?ope=A&tipo=D"]
+    elif "naccaratopropiedades.com.ar" in host:
+        category_paths = ["/propiedades/"]
+    elif "maqueda.com.ar" in host:
+        category_paths = ["/propiedades", "/alquileres"]
+    elif "inmobiliariaroman.com.ar" in host:
+        category_paths = ["/propiedades", "/alquiler"]
+    elif "paladinoprop.com.ar" in host:
+        category_paths = ["/estado/en-alquiler/", "/propiedades/"]
+    elif "josepintimalli.com.ar" in host:
+        category_paths = ["/Buscar", "/Alquiler"]
+    elif "werba.com.ar" in host:
+        category_paths = ["/Alquiler", "/Propiedades"]
+    elif "ingenierovillamil.com.ar" in host:
+        category_paths = ["/Alquiler", "/Propiedades"]
+    elif "gentileinmuebles.com" in host:
+        category_paths = ["/alquileres", "/ventas"]
+    elif "amalfitani.com.ar" in host:
+        category_paths = ["/alquiler", "/propiedades", "/buscador-de-propiedades"]
+    elif "yacopino.com.ar" in host:
+        category_paths = ["/busqueda-de-propiedades-en-alquiler"]
+    elif "diconspropiedades.com" in host:
+        category_paths = ["/Alquiler", "/Propiedades"]
+    elif "liottopropiedades.com.ar" in host:
+        category_paths = ["/property-type/alquiler/", "/property-type/alquiler/casa/", "/property-type/alquiler/departamento/"]
+    elif "fjlujan.com.ar" in host:
+        category_paths = ["/Alquiler"]
+    elif "gamezpropiedades.com.ar" in host:
+        category_paths = ["/alquiler.asp", "/Alquiler"]
+    elif "nordepropiedades.com.ar" in host:
+        category_paths = ["/Alquiler", "/home_properties/"]
+    elif "tizado.com" in host:
+        category_paths = ["/propiedades", "/alquiler"]
     elif "varcasiapropiedades.com.ar" in host:
         category_paths = ["/Alquiler", "/Propiedades"]
     elif any(domain in host for domain in (
