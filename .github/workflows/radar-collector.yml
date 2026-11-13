@@ -94,7 +94,7 @@ jobs:
         run: |
           python radar-casas/collector.py --browser --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 30 --export-path /tmp/radar-source-${{ matrix.offset }}.json
       - name: Securely sync to Supabase using GitHub's temporary OIDC identity
-        if: ${{ github.event_name == 'schedule' || inputs.dry_run == false }}
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
         env:
           RADAR_SOURCE_OFFSET: ${{ matrix.offset }}
         run: python radar-casas/github_oidc_upload.py --batch-path /tmp/radar-source-${{ matrix.offset }}.json
@@ -102,7 +102,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
         run: echo "Dry-run requested; nothing was written to Supabase."
   verify-status:
-    if: github.event_name == 'schedule' || inputs.dry_run == false
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)
     runs-on: ubuntu-latest
     timeout-minutes: 18
     permissions:
