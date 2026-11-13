@@ -1,0 +1,444 @@
+{
+  "exported_on": "2026-11-12",
+  "source": "Supabase public.radar_caba_agencies",
+  "agencies": [
+    {
+      "id": 1,
+      "name": "Maccaroni",
+      "bairro": "Liniers",
+      "url": "https://maccaroni.com.ar/"
+    },
+    {
+      "id": 2,
+      "name": "Millán y Alessi",
+      "bairro": "Versalles",
+      "url": "https://www.millanalessi.com.ar/"
+    },
+    {
+      "id": 3,
+      "name": "Acosta",
+      "bairro": "Mataderos / Villa Luro",
+      "url": "https://www.acostainmobiliaria.com.ar/index"
+    },
+    {
+      "id": 4,
+      "name": "Florencio González",
+      "bairro": "Liniers",
+      "url": "https://florenciogonzalez.com.ar/"
+    },
+    {
+      "id": 5,
+      "name": "Bener",
+      "bairro": "Villa Devoto",
+      "url": "https://www.bener.com.ar/"
+    },
+    {
+      "id": 6,
+      "name": "Giacoletto",
+      "bairro": "Villa Luro / Liniers",
+      "url": "https://www.giacolettopropiedades.com/"
+    },
+    {
+      "id": 7,
+      "name": "Fedele Inmobiliaria",
+      "bairro": "Mataderos",
+      "url": "https://www.argenprop.com/inmobiliarias/fedele-inmobiliaria/ph"
+    },
+    {
+      "id": 8,
+      "name": "Todoroff Propiedades",
+      "bairro": "Mataderos",
+      "url": "https://www.argenprop.com/inmobiliarias/todoroff-propiedades/inmuebles/mataderos"
+    },
+    {
+      "id": 9,
+      "name": "CLOM",
+      "bairro": "Vélez Sarsfield",
+      "url": "https://www.clompropiedades.com.ar/"
+    },
+    {
+      "id": 10,
+      "name": "Varela Villalba",
+      "bairro": "Vélez Sarsfield",
+      "url": "https://www.varelavillalba.com.ar/"
+    },
+    {
+      "id": 11,
+      "name": "Bosich",
+      "bairro": "Liniers",
+      "url": "https://www.bosichbienesraices.com.ar/"
+    },
+    {
+      "id": 12,
+      "name": "Borrajo",
+      "bairro": "Região oeste",
+      "url": "https://www.borrajopropiedades.com.ar/"
+    },
+    {
+      "id": 13,
+      "name": "Nolé Propiedades",
+      "bairro": "Liniers",
+      "url": "https://www.nolepropiedades.com.ar/"
+    },
+    {
+      "id": 14,
+      "name": "Mario Notti Propiedades",
+      "bairro": "Liniers / Mataderos",
+      "url": "https://marionotti.com.ar/"
+    },
+    {
+      "id": 15,
+      "name": "Florencio Gonzalez Inmuebles",
+      "bairro": "Liniers / Mataderos / Villa Luro",
+      "url": "https://florenciogonzalez.com.ar/"
+    },
+    {
+      "id": 16,
+      "name": "Gabriel Figueroa",
+      "bairro": "Liniers / Villa Luro",
+      "url": "https://gabrielfigueroa.com.ar/"
+    },
+    {
+      "id": 17,
+      "name": "Cantale Propiedades",
+      "bairro": "Liniers",
+      "url": "https://www.cantalepropiedades.com.ar/propiedades"
+    },
+    {
+      "id": 18,
+      "name": "Ricardo López Propiedades",
+      "bairro": "Liniers / Mataderos / Villa Luro",
+      "url": "https://rlpropiedades.com.ar/propiedades/"
+    },
+    {
+      "id": 19,
+      "name": "Heiber Osornio",
+      "bairro": "Liniers / Mataderos / Villa Luro",
+      "url": "https://www.estudioheiberosornio.com/PHs"
+    },
+    {
+      "id": 20,
+      "name": "Inmobiliaria Falco",
+      "bairro": "Villa Luro",
+      "url": "https://www.inmofalco.com.ar/"
+    },
+    {
+      "id": 21,
+      "name": "Grillo e Hijos",
+      "bairro": "Villa Luro",
+      "url": "https://inmobiliariagrillo.com.ar/"
+    },
+    {
+      "id": 22,
+      "name": "El Altillo Inmuebles",
+      "bairro": "Liniers / Mataderos / Villa Luro",
+      "url": "https://www.elaltilloinmuebles.com.ar/"
+    },
+    {
+      "id": 23,
+      "name": "AMI Propiedades",
+      "bairro": "Liniers / Versalles",
+      "url": "https://amipropiedades.com.ar/"
+    },
+    {
+      "id": 24,
+      "name": "Jorge Reale",
+      "bairro": "Liniers / Villa Luro",
+      "url": "https://jorgereale.com/"
+    },
+    {
+      "id": 25,
+      "name": "Jorge Parajon Propiedades",
+      "bairro": "Mataderos / Liniers",
+      "url": "https://www.parajonpropiedades.com.ar/"
+    },
+    {
+      "id": 26,
+      "name": "MG Bienes Raíces",
+      "bairro": "Mataderos",
+      "url": "https://bienesraicesmg.com.ar/"
+    },
+    {
+      "id": 27,
+      "name": "Braña Inmobiliaria",
+      "bairro": "Mataderos",
+      "url": "https://xn--abraa-rta.com.ar/"
+    },
+    {
+      "id": 28,
+      "name": "Furia Propiedades",
+      "bairro": "Monte Castro",
+      "url": "https://www.furiapropiedades.com.ar/"
+    },
+    {
+      "id": 29,
+      "name": "Vitale Feola Propiedades",
+      "bairro": "Liniers / Villa Luro",
+      "url": "https://vitalefeola.com.ar/"
+    },
+    {
+      "id": 30,
+      "name": "Pallarols Santander Propiedades",
+      "bairro": "Villa Luro / CABA",
+      "url": "https://www.pallarols-santander.com/"
+    },
+    {
+      "id": 31,
+      "name": "D’Amato Propiedades",
+      "bairro": "Villa Devoto / Monte Castro",
+      "url": "https://www.damatopropiedades.com.ar/"
+    },
+    {
+      "id": 32,
+      "name": "Leonela Cullari Propiedades",
+      "bairro": "Villa Luro",
+      "url": "https://www.leonelacullaripropiedades.com/"
+    },
+    {
+      "id": 33,
+      "name": "Magnacca Patelli Propiedades",
+      "bairro": "Monte Castro / Villa Devoto",
+      "url": "https://magnaccapatelli.com/"
+    },
+    {
+      "id": 34,
+      "name": "Varcasia Propiedades",
+      "bairro": "Monte Castro",
+      "url": "https://www.varcasiapropiedades.com.ar/"
+    },
+    {
+      "id": 35,
+      "name": "Crivez Silvana",
+      "bairro": "Monte Castro",
+      "url": "https://www.crivezsilvana-propiedades.com.ar/"
+    },
+    {
+      "id": 36,
+      "name": "Pablo Saullo e Hijos",
+      "bairro": "Mataderos / Liniers / Villa Luro",
+      "url": "https://pablosaulloehijos.com.ar/propiedades/"
+    },
+    {
+      "id": 37,
+      "name": "Roman Propiedades",
+      "bairro": "Mataderos / Liniers / Villa Luro",
+      "url": "https://inmobiliariaroman.com.ar/"
+    },
+    {
+      "id": 38,
+      "name": "Carballes Propiedades",
+      "bairro": "Monte Castro",
+      "url": "https://www.carballesinmuebles.com.ar/"
+    },
+    {
+      "id": 39,
+      "name": "Ciudad Inmobiliaria",
+      "bairro": "Mataderos / Liniers / Villa Luro",
+      "url": "https://ciudad-inmobiliaria.com/"
+    },
+    {
+      "id": 40,
+      "name": "D'AR Propiedades",
+      "bairro": "Mataderos / Villa Luro",
+      "url": "https://dar-propiedades.com.ar/"
+    },
+    {
+      "id": 41,
+      "name": "Jakim Propiedades",
+      "bairro": "Villa Devoto",
+      "url": "https://www.jakimpropiedades.com/"
+    },
+    {
+      "id": 42,
+      "name": "Maqueda Propiedades",
+      "bairro": "Mataderos / Liniers",
+      "url": "https://www.maqueda.com.ar/propiedades"
+    },
+    {
+      "id": 43,
+      "name": "MEL Propiedades",
+      "bairro": "Villa Devoto / CABA",
+      "url": "https://www.melpropiedades.com.ar/"
+    },
+    {
+      "id": 44,
+      "name": "Naccarato Propiedades",
+      "bairro": "Villa Luro",
+      "url": "https://www.naccaratopropiedades.com.ar/propiedades/"
+    },
+    {
+      "id": 45,
+      "name": "Pignataro & Asociados",
+      "bairro": "Villa Devoto",
+      "url": "https://pignataroyasociados.com.ar/"
+    },
+    {
+      "id": 46,
+      "name": "Bigi Propiedades",
+      "bairro": "Liniers / Villa Luro",
+      "url": "https://bigiprop.com.ar/"
+    },
+    {
+      "id": 47,
+      "name": "Carro Propiedades",
+      "bairro": "Villa Luro / Monte Castro",
+      "url": "https://carropropiedades.com.ar/properties"
+    },
+    {
+      "id": 48,
+      "name": "Enrique Cannone Propiedades",
+      "bairro": "Villa Devoto / Monte Castro",
+      "url": "https://www.cannonepropiedades.com.ar/index.php"
+    },
+    {
+      "id": 49,
+      "name": "Horacio Malito Propiedades",
+      "bairro": "Villa Luro / Liniers / Floresta",
+      "url": "https://www.horaciomalitopropiedades.com.ar/"
+    },
+    {
+      "id": 50,
+      "name": "Ing. E. A. Villamil Propiedades",
+      "bairro": "Mataderos / Liniers / Villa Luro",
+      "url": "https://www.ingenierovillamil.com.ar/"
+    },
+    {
+      "id": 51,
+      "name": "Jose Pintimalli Propiedades",
+      "bairro": "Villa Devoto / Monte Castro / Versalles",
+      "url": "https://www.josepintimalli.com.ar/Buscar"
+    },
+    {
+      "id": 52,
+      "name": "Paladino Negocios Inmobiliarios",
+      "bairro": "Liniers / Villa Luro / Mataderos",
+      "url": "https://www.paladinoprop.com.ar/estado/en-alquiler/"
+    },
+    {
+      "id": 53,
+      "name": "RE/MAX Fly Liniers",
+      "bairro": "Liniers / Villa Luro / Versalles",
+      "url": "https://www.remax-fly.com.ar/"
+    },
+    {
+      "id": 54,
+      "name": "Werba Inmuebles",
+      "bairro": "Villa Devoto / Versalles / Monte Castro",
+      "url": "https://www.werba.com.ar/"
+    },
+    {
+      "id": 55,
+      "name": "Amalfitani Inmuebles",
+      "bairro": "Villa Luro",
+      "url": "https://www.amalfitani.com.ar/"
+    },
+    {
+      "id": 56,
+      "name": "Dicons Propiedades",
+      "bairro": "Monte Castro / Villa Luro / Floresta",
+      "url": "https://www.diconspropiedades.com/Alquiler"
+    },
+    {
+      "id": 57,
+      "name": "FJ Lujan Propiedades",
+      "bairro": "Mataderos / Liniers / Villa Luro",
+      "url": "https://www.fjlujan.com.ar/Alquiler"
+    },
+    {
+      "id": 58,
+      "name": "Gamez Propiedades",
+      "bairro": "Mataderos / Liniers",
+      "url": "https://www.gamezpropiedades.com.ar/"
+    },
+    {
+      "id": 59,
+      "name": "Gentile Inmuebles",
+      "bairro": "Villa Luro / Mataderos",
+      "url": "https://gentileinmuebles.com/"
+    },
+    {
+      "id": 60,
+      "name": "Liotto Propiedades",
+      "bairro": "Monte Castro / Versalles / Villa Real",
+      "url": "https://liottopropiedades.com.ar/"
+    },
+    {
+      "id": 61,
+      "name": "Norde Propiedades",
+      "bairro": "Mataderos / Villa Luro",
+      "url": "https://www.nordepropiedades.com.ar/"
+    },
+    {
+      "id": 62,
+      "name": "Tizado Villa Luro",
+      "bairro": "Villa Luro / Liniers",
+      "url": "https://www.tizado.com/"
+    },
+    {
+      "id": 63,
+      "name": "Yacopino Inmobiliarias",
+      "bairro": "Monte Castro / Villa Devoto / Floresta",
+      "url": "https://www.yacopino.com.ar/busqueda-de-propiedades-en-alquiler"
+    },
+    {
+      "id": 64,
+      "name": "Barbarello Propiedades",
+      "bairro": "Monte Castro",
+      "url": null
+    },
+    {
+      "id": 65,
+      "name": "Cicchitti Hijo",
+      "bairro": "Villa Devoto",
+      "url": null
+    },
+    {
+      "id": 66,
+      "name": "Fincas Reguel",
+      "bairro": "Versalles",
+      "url": null
+    },
+    {
+      "id": 67,
+      "name": "Golden Haus Luro",
+      "bairro": "Villa Luro",
+      "url": "https://www.goldenhaus.com.ar/inmobiliaria/"
+    },
+    {
+      "id": 68,
+      "name": "Gustavo Vega Propiedades",
+      "bairro": "Liniers / Villa Luro / Versalles",
+      "url": "https://gustavovegapropiedades.com.ar/"
+    },
+    {
+      "id": 69,
+      "name": "Inmobiliaria Monferini SRL",
+      "bairro": "Villa Luro",
+      "url": "https://monferinisrl.com.ar/"
+    },
+    {
+      "id": 70,
+      "name": "Martorell Propiedades",
+      "bairro": "Vélez Sarsfield / Monte Castro / Villa Luro",
+      "url": "https://martorellprop.com.ar/"
+    },
+    {
+      "id": 71,
+      "name": "Massaro Propiedades",
+      "bairro": "Liniers / Villa Luro",
+      "url": "https://massaropropiedades.com.ar/"
+    },
+    {
+      "id": 72,
+      "name": "Rocamora Inmobiliaria",
+      "bairro": "Vélez Sarsfield",
+      "url": null
+    },
+    {
+      "id": 73,
+      "name": "SegurBA Propiedades",
+      "bairro": "Villa Devoto / Monte Castro / Villa Luro",
+      "url": "https://www.segurba.com.ar/"
+    }
+  ]
+}
