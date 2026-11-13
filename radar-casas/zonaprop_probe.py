@@ -26,6 +26,12 @@ for url in CATEGORIES:
                         attrs.append({"tag":ancestor.name,"class":ancestor.get("class"),"qa":ancestor.get("data-qa"),"data_id":ancestor.get("data-id"),"summary":ancestor.get_text(" ",strip=True)[:480]})
                         break
                 if len(attrs)>=2:break
+        if url.endswith("casas-alquiler-mataderos.html"):
+            first=h.select_one('a[href*="/propiedades/clasificado/"]')
+            if first:
+                parents=list(first.parents)[:9]
+                print("FIRST_ANCHOR",json.dumps({"href":first.get("href"),"text":first.get_text(" ",strip=True)[:180],"parent_layers":[{"tag":p.name,"class":p.get("class"),"data_qa":p.get("data-qa"),"data_id":p.get("data-id"),"text_len":len(p.get_text(" ",strip=True))} for p in parents if getattr(p,"name",None)],"parent_3_html":str(parents[3])[:6000],"parent_5_html":str(parents[5])[:11000]},ensure_ascii=False),flush=True)
+            print("QA_ELEMENTS",json.dumps([{"tag":x.name,"qa":x.get("data-qa"),"tag_class":x.get("class"),"text":x.get_text(" ",strip=True)[:65]} for x in h.select("[data-qa]")[:55]],ensure_ascii=False),flush=True)
         print(json.dumps({"url":url,"status":r.status_code,"bytes":len(r.content),"final_url":r.url,"title":h.title.get_text(" ",strip=True) if h.title else None,"links":len(links),"examples":links[:4],"card_samples":attrs,"jsonld":len(h.select('script[type="application/ld+json"]')),"next_data":bool(h.select_one("script#__NEXT_DATA__")),"challenge":bool(re.search(r"captcha|just a moment|access denied|enable javascript",h.title.get_text(" ",strip=True) if h.title else "",re.I))},ensure_ascii=False),flush=True)
     except requests.RequestException as e: print(json.dumps({"url":url,"error":str(e)[:180]},ensure_ascii=False),flush=True)
     time.sleep(.65)
