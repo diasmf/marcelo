@@ -97,6 +97,25 @@ class AgencyCatalogDiscoveryTests(unittest.TestCase):
             found = candidates(None, base, limit=20)
         self.assertIn(detail.rstrip("/"), found)
 
+    def test_audited_agencies_with_own_catalogues(self):
+        # Cover the five agencies missing from the daily collector at audit time.
+        samples=[
+            ("https://carropropiedades.com.ar/properties","https://carropropiedades.com.ar/properties-2/470-departamento-alejandro-m-cervantes-5130-villa-luro-usd95000"),
+            ("https://www.cannonepropiedades.com.ar/","https://www.cannonepropiedades.com.ar/casa-en-venta-en-villa-devoto-ficha-can5447"),
+            ("https://www.jakimpropiedades.com/","https://www.jakimpropiedades.com/casa-en-venta-en-villa-devoto-ficha-jak5447"),
+            ("https://pablosaulloehijos.com.ar/propiedades/","https://pablosaulloehijos.com.ar/propiedad/araujo-300-semipiso-4-ambientes"),
+            ("https://www.remax-fly.com.ar/","https://www.remax-fly.com.ar/propiedades-en-caba/departamentos-en-capital-federal/departamento-en-alquiler-3-ambientes-en-avenida-rivadavia-10900-liniers-capital-federal"),
+        ]
+        for base,detail in samples:
+            with self.subTest(base=base):
+                def fake_fetch(_session,url):
+                    if url==base or url==base.rstrip("/")+"/":
+                        return '<a href="'+detail+'">Ficha do imóvel</a>'
+                    return ""
+                with patch("collector.fetch",side_effect=fake_fetch):
+                    found=candidates(None,base,limit=12)
+                self.assertIn(detail.rstrip("/"),found)
+
     def test_gamez_query_identifies_individual_property(self):
         base = "https://www.gamezpropiedades.com.ar/"
         def fake_fetch(_session, url):
