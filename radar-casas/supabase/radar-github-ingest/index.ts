@@ -70,11 +70,14 @@ async function db(table: string, method: string, params: Record<string,string> |
 type Incoming = Record<string, unknown>;
 function clean(x: Incoming, sourceHost: string) {
   if (typeof x.url !== "string" || host(x.url) !== sourceHost || x.url.length > 900) throw Error("wrong-source-URL");
-  if (!/^agency-[a-f0-9]{20}$/.test(String(x.id || ""))) throw Error("invalid-ID");
-  if (x.mode !== "aluguel" || x.cur !== "ARS" || !["Casa","PH","Departamento"].includes(String(x.tipo))) throw Error("invalid-listing");
+  const portal = sourceHost === "zonaprop.com.ar";
+  const idPattern = portal ? /^zp-\d{7,9}$/ : /^agency-[a-f0-9]{20}$/;
+  if (!idPattern.test(String(x.id || ""))) throw Error("invalid-ID");
+  if (x.mode !== "aluguel" || !["ARS","USD"].includes(String(x.cur)) || !["Casa","PH","Departamento"].includes(String(x.tipo))) throw Error("invalid-listing");
   if (!["Liniers","Mataderos","Villa Luro","Versalles","Vélez Sarsfield","Villa Devoto","Monte Castro"].includes(String(x.bairro))) throw Error("outside-neighborhood");
   const price = Number(x.price);
-  if (!Number.isFinite(price) || price < 100000 || price > 100000000) throw Error("invalid-price");
+  const priceRange = x.cur === "USD" ? [250, 25000] : [100000, 100000000];
+  if (!Number.isFinite(price) || price < priceRange[0] || price > priceRange[1]) throw Error("invalid-price");
   const area = x.area == null ? null : Number(x.area);
   if (area != null && (!Number.isFinite(area) || area < 60 || area > 10000)) throw Error("invalid-area");
   const beds = Number(x.beds);
@@ -84,16 +87,19 @@ function clean(x: Incoming, sourceHost: string) {
     id: String(x.id), url: String(x.url), agency: String(x.agency).slice(0,120), mode: "aluguel",
     bairro: String(x.bairro), tipo: String(x.tipo),
     address: String(x.address || String(x.bairro) + ", CABA").slice(0,250),
-    price, cur: "ARS", beds, area,
+    price, cur: String(x.cur), beds, area,
     patio: x.patio === true, garage: x.garage === true,
     photo: photos[0] || null, photos,
     detail: String(x.detail || "").slice(0,1800),
-    tag: "Novo no Radar", verified: "Fonte própria; disponibilidade a confirmar",
+    tag: portal ? "Zonaprop" : "Novo no Radar",
+    verified: portal ? "Publicado no Zonaprop; disponibilidade a confirmar" : "Fonte própria; disponibilidade a confirmar",
     listing_status: "pending"
   };
 }
-async function findExisting(url: string) {
-  const lookup = async (u: string) => await db("radar_caba_listings", "GET", {select:"id,listing_status,photos,photo,address", url: "eq." + u, limit:"1"}) as Record<string,unknown>[];
+async function findExisting(id: string, url: string) {
+  const idMatched = await db("radar_caba_listings", "GET", {select:"id,url,listing_status,photos,photo,address", id: "eq." + id, limit:"1"}) as Record<string,unknown>[];
+  if (idMatched.length) return idMatched[0];
+  const lookup = async (u: string) => await db("radar_caba_listings", "GET", {select:"id,url,listing_status,photos,photo,address", url: "eq." + u, limit:"1"}) as Record<string,unknown>[];
   const exact = await lookup(url);
   if (exact.length) return exact[0];
   const alternate = url.endsWith("/") ? url.replace(/\/$/, "") : url + "/";
@@ -104,20 +110,24 @@ async function ingest(rows: Incoming[], sourceNames: string[]) {
   if (rows.length > 200) return reply({error: "batch-too-large"}, 413);
   const catalog = await db("radar_caba_agencies", "GET", {select:"name,url"}) as {name:string,url:string|null}[];
   const allowed = new Map(catalog.filter(x=>x.url).map(x=>[x.name,host(x.url || "")]));
+  // A portal is an allowed source, never a fictitious real estate agency.
+  allowed.set("Zonaprop","zonaprop.com.ar");
   let inserted=0, updated=0, rejected=0;
   const errors: Record<string,number> = {};
   for (const input of rows) {
     try {
       if (!input || typeof input !== "object" || typeof input.agency !== "string") throw Error("bad-payload");
-      if (!sourceNames.includes(input.agency)) throw Error("not-in-shard");
-      const agencyHost = allowed.get(input.agency);
+      const sourceName = input.source === "Zonaprop" ? "Zonaprop" : input.agency;
+      if (!sourceNames.includes(sourceName)) throw Error("not-in-shard");
+      const agencyHost = allowed.get(sourceName);
       if (!agencyHost) throw Error("agency-not-registered");
       const row = clean(input, agencyHost);
       const now = new Date().toISOString();
-      const existing = await findExisting(row.url);
+      const existing = await findExisting(row.id, row.url);
       if (existing) {
         const changes: Record<string,unknown> = {
-          updated_at: now, status_checked_at: now, price: row.price,
+          updated_at: now, status_checked_at: now, price: row.price, cur: row.cur,
+          ...(existing.url !== row.url && sourceName === "Zonaprop" ? {url: row.url} : {}),
         };
         if (row.area !== null) changes.area = row.area;
         if (Number(row.beds) > 0) changes.beds = row.beds;
@@ -125,7 +135,7 @@ async function ingest(rows: Incoming[], sourceNames: string[]) {
         if (!existing.photo && row.photo) { changes.photo = row.photo; changes.photos = row.photos; }
         if (existing.listing_status === "inactive") {
           changes.listing_status = "pending";
-          changes.status_reason = "Seen on originating agency site";
+          changes.status_reason = sourceName === "Zonaprop" ? "Seen in current Zonaprop rental search" : "Seen on originating agency site";
         }
         await db("radar_caba_listings", "PATCH", {id:"eq."+String(existing.id)}, changes);
         updated++;
@@ -140,6 +150,30 @@ async function ingest(rows: Incoming[], sourceNames: string[]) {
     }
   }
   return reply({ok: rejected===0, inserted, updated, rejected, errors, sources: sourceNames.length}, rejected ? 422 : 200);
+}
+// Report the portal source state separately from agency inventory. Source access
+// can be intermittent, and a block must never imply listings have disappeared.
+async function recordPortalStatus(data: Incoming) {
+  if (data.source !== "Zonaprop" || !["ok","partial","blocked","no_results","unavailable"].includes(String(data.status))) {
+    return reply({error:"invalid-portal-report"},400);
+  }
+  const counter = (v: unknown) => Math.max(0, Math.min(100000, Number.isSafeInteger(Number(v)) ? Number(v) : 0));
+  const pages_checked = counter(data.pages_checked);
+  const pages_reached = counter(data.pages_reached);
+  const listing_links = counter(data.listing_links);
+  const listings_parsed = counter(data.listings_parsed);
+  if (pages_checked > 60 || pages_reached > pages_checked || listings_parsed > listing_links) {
+    return reply({error:"invalid-portal-counters"},400);
+  }
+  const status = String(data.status);
+  const now = new Date().toISOString();
+  const updates: Record<string,unknown> = {
+    status, last_attempt_at:now, pages_checked, pages_reached, listing_links, listings_parsed,
+    last_error: data.last_error == null ? null : String(data.last_error).slice(0,120)
+  };
+  if ((status === "ok" || status === "partial") && listings_parsed > 0) updates.last_success_at = now;
+  await db("radar_caba_portal_sources","PATCH",{source:"eq.Zonaprop"},updates);
+  return reply({ok:true,source:"Zonaprop",status,parsed:listings_parsed});
 }
 // Daily source availability checks. Only a second 404/410 on a different
 // day can hide a listing; 403, 429, timeouts and server errors never remove it.
@@ -206,6 +240,7 @@ Deno.serve(async req => {
     const data = JSON.parse(text);
     if (data.kind === "probe") return reply({ok:true, auth:"github-oidc", repository:identity.repository, run_id:identity.run_id});
     if (data.kind === "availability" && Array.isArray(data.checks)) return await processAvailability(data.checks);
+    if (data.kind === "portal_status") return await recordPortalStatus(data);
     if (data.kind !== "upsert" || !Array.isArray(data.listings) || !Array.isArray(data.sources) || data.sources.length > 20) return reply({error:"invalid-request"},400);
     if (!data.sources.every((s:unknown)=>typeof s==="string"&&s.length<130)) return reply({error:"invalid-sources"},400);
     return await ingest(data.listings, data.sources);
