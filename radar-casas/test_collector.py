@@ -130,6 +130,31 @@ class AgencyCatalogDiscoveryTests(unittest.TestCase):
 
 
 class PropertyParsingTests(unittest.TestCase):
+    def test_menu_alquiler_does_not_turn_sale_into_rental(self):
+        html=page("Bragado al 5000 Casa/Lote 5 Ambientes",
+                  "Ubicación Estado de la propiedad Todas Alquiler Venta Tipo de propiedad "
+                  "Buscar Bragado al 5000 Mataderos Venta USD $270.000 "
+                  "Habitaciones 4 5 ambientes Superficie total 220 m² Patio cochera.")
+        row,reason=parse_property(html,
+            "https://pablosaulloehijos.com.ar/propiedad/bragado-al-5000-casa-lote-5-ambientes",
+            "Pablo Saullo e Hijos")
+        self.assertIsNone(row)
+        self.assertEqual(reason,"sale")
+
+    def test_pablo_saul_property_photos_do_not_include_related_listings(self):
+        html=('<html><body><main><h1>Casa 4 ambientes en alquiler en Mataderos</h1>'
+              '<p>Alquiler ARS $1.100.000. Bragado 5000, Mataderos. '
+              '3 dormitorios. Superficie total 120 m². Patio.</p>'
+              '<img src="https://pablosaulloehijos.com.ar/wp-content/uploads/2026/bragado-5000.jpg">'
+              '<img src="https://pablosaulloehijos.com.ar/wp-content/uploads/2025/carhue-3140.jpg">'
+              '</main></body></html>')
+        row,reason=parse_property(html,
+            "https://pablosaulloehijos.com.ar/propiedad/bragado-5000-casa",
+            "Pablo Saullo e Hijos")
+        self.assertEqual(reason,"eligible")
+        self.assertEqual(len(row["photos"]),1)
+        self.assertIn("bragado",row["photo"])
+
     def test_eligible_four_ambientes(self):
         html=page("Casa 4 ambientes en alquiler en Monte Castro", "Lascano 5055, Monte Castro. $ 1.800.000. 3 dormitorios. Superficie total 220 m². Patio y terraza.")
         row,reason=parse_property(html,"https://agency.example.org/propiedad/42","Test Agency")
