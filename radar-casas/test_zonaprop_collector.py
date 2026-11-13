@@ -1,6 +1,6 @@
 import unittest
 from bs4 import BeautifulSoup
-from zonaprop_collector import canonical, cards, parsed_card, extract_price, category_urls
+from zonaprop_collector import canonical, cards, parsed_card, extract_price, category_urls, photos_by_id, listing_count
 
 def fake_card(url, price, stats, address, description, image, agent=""):
     return f"""
@@ -55,6 +55,29 @@ class ZonapropTests(unittest.TestCase):
         self.assertEqual(extract_price("$ 1.250.000"),(1250000,"ARS"))
         self.assertEqual(extract_price("$ 350.000"),(350000,"ARS"))
         self.assertIsNone(canonical("https://zonaprop.com.ar/casas-venta-mataderos.html")[0])
+
+    def test_wrong_city_recommendations_are_not_caba_listings(self):
+        html=fake_card("/propiedades/clasificado/alclcain-casa-moron-60509999.html",
+            "$ 1.100.000","120 m² tot. 4 amb. 3 dorm.",
+            "Morón, Morón",
+            "Alquiler casa en Morón con jardín y cochera",
+            "https://imgar.zonapropcdn.com/avisos/1/00/60/50/99/99/640x480/test.jpg")
+        found=cards(BeautifulSoup(html,"html.parser"))
+        u,card=found["zp-60509999"]
+        self.assertIsNone(parsed_card(u,"zp-60509999",card,"Mataderos","casas"))
+
+    def test_photo_index_keeps_the_exact_posting_id(self):
+        html='<html><img src="https://imgar.zonapropcdn.com/avisos/1/00/53/71/69/27/720x532/pola.jpg"/>' + (
+            '<img src="https://imgar.zonapropcdn.com/avisos/1/00/53/71/69/28/720x532/other.jpg"/></html>')
+        images=photos_by_id(BeautifulSoup(html,"html.parser"))
+        self.assertIn("53716927",images)
+        self.assertIn("53716928",images)
+        self.assertIn("/69/27/",images["53716927"])
+        self.assertNotIn("/69/28/",images["53716927"])
+
+    def test_limit_uses_real_result_count_not_recommendations(self):
+        soup=BeautifulSoup("<h1>4 Casas en alquiler en Mataderos, CABA</h1>","html.parser")
+        self.assertEqual(listing_count(soup,"casas"),4)
 
     def test_skip_small_listings(self):
         markup=fake_card("/propiedades/clasificado/alcldein-mono-60596666.html",
