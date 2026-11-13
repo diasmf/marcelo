@@ -12,7 +12,10 @@ Esta auditoria testa acesso ao site, descoberta de links e leitura de uma amostr
 - Miniaturas de propriedades relacionadas do Pablo Saullo foram excluídas quando não correspondem ao imóvel da ficha.
 - Os links oficiais de Fedele Inmobiliaria e Jorge Reale foram localizados; o coletor deixou de depender dos perfis Argenprop para essas duas fontes. O novo catálogo da Fedele ainda está pendente de validação.
 - **Proppies é um portal, não uma imobiliária**: 91 anúncios do radar vêm de lá, associados a 49 nomes de anunciantes após limpeza de ruído de avaliações. Os cards diferenciam anunciante e plataforma; quando há site próprio registrado, incluem esse link. Não suprimimos supostas duplicatas sem confirmação da identidade do imóvel.
-- **Ponto operacional bloqueado**: a execução diária de 12/11/2026 tinha as variáveis `RADAR_SUPABASE_URL` e `RADAR_SUPABASE_SERVICE_ROLE_KEY` vazias no GitHub Actions e realizou apenas dry-run. As fontes estão configuradas, mas **novas gravações automáticas dependem da configuração segura desses dois segredos**. O workflow agora sinaliza esse modo explicitamente.
+- **Ponto operacional resolvido em 13/11/2026:** a execução de 12/11 havia ocorrido apenas em dry-run por falta de credenciais. Agora o GitHub Actions envia uma identidade OIDC temporária assinada para a Edge Function `radar-github-ingest`, que verifica repositório, workflow, branch, assinatura e prazo de validade antes de gravar no Supabase. A chave de administração permanece dentro do Supabase; não há segredo de banco armazenado no GitHub. O [teste de gravação real](https://github.com/diasmf/marcelo/actions/runs/43420672855) atualizou 1 imóvel sem erros.
+- **Coleta diária:** cinco grupos de fontes no workflow `radar-collector.yml`, com 62 imobiliárias e navegador para os sites que precisam de renderização. Horário programado: 10h37 UTC (07h37 Buenos Aires). A rotina não depende do computador pessoal ligado.
+- **Limpeza conservadora diária:** os URLs de anúncios são verificados independentemente; apenas HTTP 404 ou 410 confirmado em dois dias distintos marca o imóvel como inativo. Falhas 403/429/5xx, timeouts e respostas incertas não removem imóveis. A base `radar_caba_source_health` conserva evidências, sem apagar favoritos/comentários. [Teste do endpoint e 9 verificações de estado concluídos](https://github.com/diasmf/marcelo/actions/runs/43421612762).
+- **Limitações:** 11 das 73 imobiliárias ainda não estão integradas ao coletor principal (incluindo 4 sem site cadastrado); teste de uma ficha não demonstra cobertura integral. Anúncios retirados do catálogo mas mantidos no site com HTTP 200 não serão removidos automaticamente até haver evidência mais forte de indisponibilidade.
 
 [Validação das cinco novas fontes](https://github.com/diasmf/marcelo/actions/runs/43341125973)
 
@@ -28,11 +31,11 @@ Esta auditoria testa acesso ao site, descoberta de links e leitura de uma amostr
 | Sem catálogo online cadastrado | 4 |
 | **Total** | **73** |
 
-**Fontes no coletor principal:** 57. **Com site cadastrado, mas ausentes do coletor:** 12. **Com fichas legíveis, mas ausentes do coletor:** 5.
+**Fontes no coletor principal (13/11/2026):** 62. **Com site cadastrado, mas ausentes do coletor:** 7. **Com fichas legíveis, mas ausentes do coletor:** 0.
 
 ## Resultado individual
 
-| Imobiliária | Site no coletor | Links identificados* | Resultado |
+| Imobiliária | Site no coletor (13/11) | Links identificados* | Resultado |
 |---|:---:|---:|---|
 | [Acosta](https://www.acostainmobiliaria.com.ar/index) | Sim | 11 | Ficha de imóvel legível (amostra) |
 | [Amalfitani Inmuebles](https://www.amalfitani.com.ar/) | Sim | 3 | Ficha encontrada, extração não confirmada |
@@ -45,7 +48,7 @@ Esta auditoria testa acesso ao site, descoberta de links e leitura de uma amostr
 | [Braña Inmobiliaria](https://xn--abraa-rta.com.ar/) | Sim | 0 | Site abre, sem links detectados |
 | [Cantale Propiedades](https://www.cantalepropiedades.com.ar/propiedades) | Sim | 32 | Ficha de imóvel legível (amostra) |
 | [Carballes Propiedades](https://www.carballesinmuebles.com.ar/) | Não | 4 | Ficha encontrada, extração não confirmada |
-| [Carro Propiedades](https://carropropiedades.com.ar/properties) | Não | 9 | Ficha de imóvel legível (amostra) |
+| [Carro Propiedades](https://carropropiedades.com.ar/properties) | Sim | 9 | Ficha de imóvel legível (amostra) |
 | Cicchitti Hijo | Não | 0 | Sem catálogo online cadastrado |
 | [Ciudad Inmobiliaria](https://ciudad-inmobiliaria.com/) | Não | 1 | Ficha encontrada, extração não confirmada |
 | [CLOM](https://www.clompropiedades.com.ar/) | Sim | 20 | Ficha de imóvel legível (amostra) |
@@ -54,7 +57,7 @@ Esta auditoria testa acesso ao site, descoberta de links e leitura de uma amostr
 | [D'AR Propiedades](https://dar-propiedades.com.ar/) | Não | 0 | Site abre, sem links detectados |
 | [Dicons Propiedades](https://www.diconspropiedades.com/Alquiler) | Sim | 20 | Ficha de imóvel legível (amostra) |
 | [El Altillo Inmuebles](https://www.elaltilloinmuebles.com.ar/) | Sim | 32 | Ficha de imóvel legível (amostra) |
-| [Enrique Cannone Propiedades](https://www.cannonepropiedades.com.ar/index.php) | Não | 8 | Ficha de imóvel legível (amostra) |
+| [Enrique Cannone Propiedades](https://www.cannonepropiedades.com.ar/index.php) | Sim | 8 | Ficha de imóvel legível (amostra) |
 | [Fedele Inmobiliaria](https://www.argenprop.com/inmobiliarias/fedele-inmobiliaria/ph) | Sim | 0 | Site indisponível/bloqueado no teste |
 | Fincas Reguel | Não | 0 | Sem catálogo online cadastrado |
 | [FJ Lujan Propiedades](https://www.fjlujan.com.ar/Alquiler) | Sim | 17 | Ficha de imóvel legível (amostra) |
@@ -73,7 +76,7 @@ Esta auditoria testa acesso ao site, descoberta de links e leitura de uma amostr
 | [Ing. E. A. Villamil Propiedades](https://www.ingenierovillamil.com.ar/) | Sim | 16 | Ficha encontrada, extração não confirmada |
 | [Inmobiliaria Falco](https://www.inmofalco.com.ar/) | Sim | 0 | Site indisponível/bloqueado no teste |
 | [Inmobiliaria Monferini SRL](https://monferinisrl.com.ar/) | Sim | 5 | Ficha de imóvel legível (amostra) |
-| [Jakim Propiedades](https://www.jakimpropiedades.com/) | Não | 6 | Ficha de imóvel legível (amostra) |
+| [Jakim Propiedades](https://www.jakimpropiedades.com/) | Sim | 6 | Ficha de imóvel legível (amostra) |
 | [Jorge Parajon Propiedades](https://www.parajonpropiedades.com.ar/) | Sim | 0 | Site indisponível/bloqueado no teste |
 | [Jorge Reale](https://jorgereale.com/) | Sim | 0 | Site indisponível/bloqueado no teste |
 | [Jose Pintimalli Propiedades](https://www.josepintimalli.com.ar/Buscar) | Sim | 31 | Ficha de imóvel legível (amostra) |
@@ -91,11 +94,11 @@ Esta auditoria testa acesso ao site, descoberta de links e leitura de uma amostr
 | [Naccarato Propiedades](https://www.naccaratopropiedades.com.ar/propiedades/) | Sim | 4 | Ficha encontrada, extração não confirmada |
 | [Nolé Propiedades](https://www.nolepropiedades.com.ar/) | Sim | 28 | Ficha de imóvel legível (amostra) |
 | [Norde Propiedades](https://www.nordepropiedades.com.ar/) | Sim | 12 | Ficha de imóvel legível (amostra) |
-| [Pablo Saullo e Hijos](https://pablosaulloehijos.com.ar/propiedades/) | Não | 32 | Ficha de imóvel legível (amostra) |
+| [Pablo Saullo e Hijos](https://pablosaulloehijos.com.ar/propiedades/) | Sim | 32 | Ficha de imóvel legível (amostra) |
 | [Paladino Negocios Inmobiliarios](https://www.paladinoprop.com.ar/estado/en-alquiler/) | Sim | 32 | Ficha de imóvel legível (amostra) |
 | [Pallarols Santander Propiedades](https://www.pallarols-santander.com/) | Sim | 32 | Ficha de imóvel legível (amostra) |
 | [Pignataro & Asociados](https://pignataroyasociados.com.ar/) | Não | 0 | Site abre, sem links detectados |
-| [RE/MAX Fly Liniers](https://www.remax-fly.com.ar/) | Não | 32 | Ficha de imóvel legível (amostra) |
+| [RE/MAX Fly Liniers](https://www.remax-fly.com.ar/) | Sim | 32 | Ficha de imóvel legível (amostra) |
 | [Ricardo López Propiedades](https://rlpropiedades.com.ar/propiedades/) | Sim | 32 | Ficha de imóvel legível (amostra) |
 | Rocamora Inmobiliaria | Não | 0 | Sem catálogo online cadastrado |
 | [Roman Propiedades](https://inmobiliariaroman.com.ar/) | Sim | 7 | Links encontrados, fichas não acessíveis |
