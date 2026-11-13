@@ -123,7 +123,7 @@
  </div>
  <div class="rent-budget-bar" id="rentBudgetBar"><label><input type="checkbox" id="rentBudgetEnabled" checked>Aluguel <span id="budgetLabel">US$ 600–1.200</span></label><span id="rentFxHelp">Convertendo para pesos pela cotação do dólar MEP…</span></div>
 </div><div class="inventory-summary" id="inventorySummary" role="status" aria-live="polite">Conferindo total de imóveis cadastrados…</div><div class="sectionhead"><h2 id="heading">Casas para alugar</h2><p id="subtitle">Carregando os imóveis</p></div><main class="cards" id="cards"><div class="blank">Buscando as opções...</div></main></div>
-<section id="agencyView" class="hidden"><div class="sectionhead"><h2>Imobiliárias da região</h2><p>Priorizamos pequenas corretoras e anúncios nos próprios sites.</p></div><div id="agencyCards" class="agencygrid"></div>
+<section id="agencyView" class="hidden"><div class="sectionhead"><h2>Imobiliárias da região</h2><p>Priorizamos pequenas corretoras e anúncios nos próprios sites.</p></div><div id="agencyAuditSummary" class="inventory-summary" role="status"></div><div id="agencyCards" class="agencygrid"></div>
  <details id="otherAgencyGroup" class="agency-group hidden"><summary>Outros anunciantes com imóveis no Radar (<span id="otherAgencyCount">0</span>)</summary><div id="otherAgencyCards" class="agencygrid"></div></details>
  </section>
 <div class="notice"><strong>Sobre os anúncios:</strong> fotos e preços são informados pelas fontes. A disponibilidade ainda deve ser confirmada com a imobiliária. Se alguma imagem não carregar, use “Galeria original” para consultar a publicação. Falha temporária de acesso não prova que o imóvel saiu do mercado.</div><footer class="footer">Radar de Casas CABA · Liniers, Mataderos, Villa Luro, Versalles, Vélez Sarsfield, Villa Devoto e Monte Castro · Atualizações e avaliações sincronizadas online.</footer></div><div id="toast" role="status"></div><div id="photoLightbox" role="dialog" aria-modal="true" aria-label="Galeria de fotos"><button class="close" id="closeLightbox" aria-label="Fechar">×</button><button class="largeNav largePrev" id="prevLightbox" aria-label="Foto anterior">‹</button><img id="lightboxImg" alt="Foto do imóvel"><button class="largeNav largeNext" id="nextLightbox" aria-label="Foto seguinte">›</button><div class="lbCaption" id="lbCaption"></div></div>
@@ -506,6 +506,8 @@ function render(){
     var name=canonicalAgency(a.name),before=agencyByName.get(name);
     if(!before||(a.audit_status==='links_found'&&before.audit_status!=='links_found')||Number(a.audit_links_found||0)>Number(before.audit_links_found||0))agencyByName.set(name,a);
    });
+   var audits=Array.from(agencyByName.values());var countStatus=function(status){return audits.filter(function(a){return a.audit_status===status}).length};
+   el('agencyAuditSummary').textContent='Auditoria das '+audits.length+' imobiliárias: '+countStatus('details_verified')+' com fichas verificadas · '+(countStatus('details_visible_unparsed')+countStatus('links_only'))+' com links pendentes de extração · '+countStatus('site_reachable_no_links')+' sites sem links detectados · '+countStatus('site_unreachable')+' com falha de acesso · '+countStatus('no_site')+' sem catálogo. Resultados de amostragem, sem aplicar seu filtro principal.';
    var agencyCards=Array.from(agencyByName.values()).sort(function(a,b){
      var rentA=state.listings.filter(function(x){return canonicalAgency(x.agency)===canonicalAgency(a.name)&&x.mode==='aluguel'&&x.listing_status!=='inactive'}).length;
      var rentB=state.listings.filter(function(x){return canonicalAgency(x.agency)===canonicalAgency(b.name)&&x.mode==='aluguel'&&x.listing_status!=='inactive'}).length;
@@ -515,9 +517,9 @@ function render(){
    var rents=listings.filter(function(x){return x.mode==='aluguel'});
    var nonInactive=listings.filter(function(x){return x.listing_status!=='inactive'});
    var status=a.audit_status||'not_checked',found=Number(a.audit_links_found||0);
-   var statusLabel=status==='links_found'?'Links identificados (coleta parcial)':status==='unreachable'?'Falha de acesso no teste':status==='no_links'?'Nenhum link detectado (ainda não validado)':status==='discovered_no_catalogue'?'Encontrada no mapa · sem catálogo próprio confirmado':'Ainda sem teste registrado';
+   var statusLabel=({details_verified:'Ficha de imóvel acessível e legível (amostra)',details_visible_unparsed:'Links encontrados; extração da ficha NÃO confirmada',links_only:'Links encontrados; páginas inacessíveis no teste',site_reachable_no_links:'Site acessível; nenhum link detectado',site_unreachable:'Site indisponível ou bloqueado no teste',no_site:'Sem site de catálogo cadastrado',links_found:'Links identificados (coleta parcial)',unreachable:'Falha de acesso no teste',no_links:'Nenhum link detectado',discovered_no_catalogue:'Sem catálogo próprio confirmado'})[status]||'Ainda sem teste registrado';
    var when=a.audit_checked_at?new Date(a.audit_checked_at).toLocaleDateString('pt-BR'):'';
-   var auditExtra=status==='links_found'?' · '+found+' links encontrados':(status==='unreachable'?' · verificar acesso à fonte':status==='discovered_no_catalogue'?' · verificar site ou anúncios próprios':' · não significa ausência de imóveis');
+   var auditExtra=found?' · '+found+' links identificados (limite da amostra)':(status==='no_site'?' · procurar site próprio':' · não prova ausência de anúncios');
    var auditHref=a.audit_run_url?'<a href="'+safeUrl(a.audit_run_url)+'" target="_blank" rel="noopener noreferrer">Ver relatório da coleta ↗</a>':'';
    return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(a.bairro)+'</small>'+
     '<div class="agency-data"><strong>Anúncios no Radar</strong><span>'+listings.length+' anúncios cadastrados · '+rents.length+' aluguel · '+(listings.length-rents.length)+' venda · '+nonInactive.length+' não marcados inativos</span></div>'+
