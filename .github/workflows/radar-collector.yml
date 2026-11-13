@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        offset: [0, 5, 10, 15, 20, 25, 30]
+        offset: [0, 15, 30, 45, 60]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,19 +36,25 @@ jobs:
         run: python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2'
       - name: Unit tests
         run: python -m unittest discover -s radar-casas -p 'test_collector.py' -v
-      - name: Inspect five sources without modifying data
-        run: python radar-casas/collector.py --source-offset ${{ matrix.offset }} --source-limit 5 --max-per-source 15 --emit-json
+      - name: Inspect fifteen sources without modifying data
+        run: python radar-casas/collector.py --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 12 --emit-json
   collect:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        offset: [0, 15, 30, 45, 60]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Dependencies
-        run: python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2'
+      - name: Dependencies and Chromium
+        run: |
+          python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2' 'playwright==1.65.0'
+          python -m playwright install --with-deps chromium
       - name: Unit tests (no network)
         run: python -m unittest discover -s radar-casas -p 'test_collector.py' -v
       - name: Collect public agency listings (writes only if credentials are configured)
@@ -59,10 +65,10 @@ jobs:
         shell: bash
         run: |
           if [[ "$DRY_RUN" == "true" ]]; then
-            python radar-casas/collector.py
+            python radar-casas/collector.py --browser --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 30
           elif [[ -n "$SUPABASE_URL" && -n "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
-            python radar-casas/collector.py --apply
+            python radar-casas/collector.py --apply --browser --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 30
           else
-            echo 'Collector remains read-only: Radar Supabase GitHub secrets are not configured.'
-            python radar-casas/collector.py
+            echo '::warning::AUTO-UPDATE DISABLED: configure RADAR_SUPABASE_URL and RADAR_SUPABASE_SERVICE_ROLE_KEY secrets in GitHub Actions.'
+            python radar-casas/collector.py --browser --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 30
           fi
