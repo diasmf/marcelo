@@ -87,6 +87,10 @@ def main():
         if not batch["listings"]:
             send(session, batch, token)
         print(json.dumps({"uploaded_sources": len(batch["sources"]), "eligible_rows": len(batch["listings"]), "ingestion": total}, ensure_ascii=False))
+        if isinstance(batch.get("portal_status"), dict):
+            source = batch["portal_status"]
+            status_result = send(session, {"kind": "portal_status", **source}, token)
+            print(json.dumps({"portal_status": status_result}, ensure_ascii=False))
     return 0
 
 
