@@ -154,7 +154,8 @@ def inferred_bairro(location, requested):
     for name in sorted(NEIGHBORHOODS, key=len, reverse=True):
         if re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", location, re.I):
             return name
-    return requested if re.search(r"Capital Federal|CABA", location, re.I) else None
+    # A street-only result is still valid when the category is explicitly scoped.
+    return requested
 
 def extract_address(card, text, bairro):
     for selector in ('[data-qa*="LOCATION"]', '[class*="posting-location"]', '[class*="postingLocation"]',
