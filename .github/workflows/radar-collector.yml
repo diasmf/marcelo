@@ -4,6 +4,7 @@ on:
     paths:
       - 'radar-casas/collector.py'
       - 'radar-casas/test_collector.py'
+      - 'radar-casas/github_oidc_upload.py'
       - '.github/workflows/radar-collector.yml'
   workflow_dispatch:
     inputs:
@@ -38,10 +39,35 @@ jobs:
         run: python -m unittest discover -s radar-casas -p 'test_collector.py' -v
       - name: Inspect fifteen sources without modifying data
         run: python radar-casas/collector.py --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 12 --emit-json
+  oidc-smoke:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencies
+        run: |
+          python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2' 'playwright==1.65.0'
+          python -m playwright install --with-deps chromium
+      - name: Verify secure GitHub identity on Supabase
+        run: python radar-casas/github_oidc_upload.py --probe
+      - name: Try real ingestion from one verified agency without a stored secret
+        run: |
+          python radar-casas/collector.py --browser --source-name "Varcasia Propiedades" --max-per-source 14 --export-path /tmp/radar-oidc-smoke.json
+          python radar-casas/github_oidc_upload.py --batch-path /tmp/radar-oidc-smoke.json
   collect:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 28
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -57,18 +83,15 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Unit tests (no network)
         run: python -m unittest discover -s radar-casas -p 'test_collector.py' -v
-      - name: Collect public agency listings (writes only if credentials are configured)
-        env:
-          SUPABASE_URL: ${{ secrets.RADAR_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.RADAR_SUPABASE_SERVICE_ROLE_KEY }}
-          DRY_RUN: ${{ inputs.dry_run }}
+      - name: Collect agency listings in this source shard (read-only on the runner)
         shell: bash
         run: |
-          if [[ "$DRY_RUN" == "true" ]]; then
-            python radar-casas/collector.py --browser --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 30
-          elif [[ -n "$SUPABASE_URL" && -n "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
-            python radar-casas/collector.py --apply --browser --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 30
-          else
-            echo '::warning::AUTO-UPDATE DISABLED: configure RADAR_SUPABASE_URL and RADAR_SUPABASE_SERVICE_ROLE_KEY secrets in GitHub Actions.'
-            python radar-casas/collector.py --browser --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 30
-          fi
+          python radar-casas/collector.py --browser --source-offset ${{ matrix.offset }} --source-limit 15 --max-per-source 30 --export-path /tmp/radar-source-${{ matrix.offset }}.json
+      - name: Securely sync to Supabase using GitHub's temporary OIDC identity
+        if: ${{ github.event_name == 'schedule' || inputs.dry_run == false }}
+        env:
+          RADAR_SOURCE_OFFSET: ${{ matrix.offset }}
+        run: python radar-casas/github_oidc_upload.py --batch-path /tmp/radar-source-${{ matrix.offset }}.json
+      - name: Report manual dry-run
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == true }}
+        run: echo "Dry-run requested; nothing was written to Supabase."
