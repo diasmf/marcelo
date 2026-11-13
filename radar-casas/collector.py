@@ -32,7 +32,7 @@ SOURCES = {
     "Bener": "https://www.bener.com.ar/",
     "AMI Propiedades": "https://amipropiedades.com.ar/",
     "Furia Propiedades": "https://www.furiapropiedades.com.ar/",
-    "Jorge Reale": "https://www.argenprop.com/inmobiliarias/jorge-reale-group/inmuebles",
+    "Jorge Reale": "https://jorgereale.com/",
     "MG Bienes Raíces": "https://bienesraicesmg.com.ar/",
     "Vitale Feola Propiedades": "https://vitalefeola.com.ar/",
     "Acosta": "https://www.acostainmobiliaria.com.ar/",
@@ -52,7 +52,7 @@ SOURCES = {
     "Magnacca Patelli Propiedades": "https://magnaccapatelli.com/",
     "Varcasia Propiedades": "https://www.varcasiapropiedades.com.ar/",
     "Crivez Silvana": "https://www.crivezsilvana-propiedades.com.ar/",
-    "Fedele Inmobiliaria": "https://www.argenprop.com/inmobiliarias/fedele-inmobiliaria/ph",
+    "Fedele Inmobiliaria": "https://www.inmobiliariafedele.com/",
     "Todoroff Propiedades": "https://www.argenprop.com/inmobiliarias/todoroff-propiedades/inmuebles/mataderos",
     "Florencio Gonzalez Inmuebles": "https://florenciogonzalez.com.ar/",
     # Catalogued agencies now included in the collector.
@@ -203,6 +203,10 @@ def candidates(session, base, limit=50):
         category_paths = ["/inmobiliaria/"]
     elif "carropropiedades.com.ar" in host:
         category_paths = ["/properties", "/properties-2"]
+    elif "inmobiliariafedele.com" in host:
+        category_paths = ["/propiedades.php", "/alquileres"]
+    elif "jorgereale.com" in host:
+        category_paths = ["/propiedades", "/alquileres"]
     elif "cannonepropiedades.com.ar" in host:
         category_paths = ["/propiedades?ope=A", "/propiedades?ope=V", "/propiedades"]
     elif "jakimpropiedades.com" in host:
@@ -282,6 +286,10 @@ def browser_candidates(base, agency, limit=80):
         pages=[base]+[urljoin(base,p) for p in ("/propiedades?ope=A", "/propiedades?ope=V", "/propiedades")]
     elif agency=="Carro Propiedades":
         pages=[base,urljoin(base,"/properties-2")]
+    elif agency=="Fedele Inmobiliaria":
+        pages=[base,urljoin(base,"/propiedades.php"),urljoin(base,"/alquileres")]
+    elif agency=="Jorge Reale":
+        pages=[base,urljoin(base,"/propiedades")]
     links=set()
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -492,7 +500,7 @@ def main():
         sources = sources[:args.source_limit]
     for agency, base in sources:
         urls = candidates(session, base, max(1, min(args.max_per_source, 80)))
-        if args.browser and agency in ("Maccaroni","Inmobiliaria Falco","Heiber Osornio","Varcasia Propiedades","Acosta","MG Bienes Raíces","Vitale Feola Propiedades","Braña Inmobiliaria","Magnacca Patelli Propiedades","Enrique Cannone Propiedades","Jakim Propiedades","Carro Propiedades"):
+        if args.browser and agency in ("Maccaroni","Inmobiliaria Falco","Heiber Osornio","Varcasia Propiedades","Acosta","MG Bienes Raíces","Vitale Feola Propiedades","Braña Inmobiliaria","Magnacca Patelli Propiedades","Enrique Cannone Propiedades","Jakim Propiedades","Carro Propiedades","Fedele Inmobiliaria","Jorge Reale"):
             try:
                 browser_urls = browser_candidates(base, agency, max(1,min(args.max_per_source,80)))
                 urls = sorted(set(urls)|set(browser_urls),key=lambda u:(0 if "alquiler" in u.lower() else 1,u))[:max(1,min(args.max_per_source,80))]
