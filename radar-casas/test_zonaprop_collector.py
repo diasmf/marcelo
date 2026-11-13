@@ -1,6 +1,6 @@
 import unittest
 from bs4 import BeautifulSoup
-from zonaprop_collector import canonical, cards, parsed_card, extract_price, category_urls, photos_by_id, listing_count
+from zonaprop_collector import canonical, cards, parsed_card, extract_price, category_urls, photos_by_id, listing_count, add_gallery
 
 def fake_card(url, price, stats, address, description, image, agent=""):
     return f"""
@@ -72,8 +72,22 @@ class ZonapropTests(unittest.TestCase):
         images=photos_by_id(BeautifulSoup(html,"html.parser"))
         self.assertIn("53716927",images)
         self.assertIn("53716928",images)
-        self.assertIn("/69/27/",images["53716927"])
-        self.assertNotIn("/69/28/",images["53716927"])
+        self.assertIn("/69/27/",images["53716927"][0])
+        self.assertNotIn("/69/28/",str(images["53716927"]))
+
+    def test_multiple_photos_for_same_posting_and_no_cross_listing(self):
+        html = ('<img src="https://imgar.zonapropcdn.com/avisos/1/00/60/59/58/80/720x532/front.jpg">'
+                '<img src="https://imgar.zonapropcdn.com/avisos/1/00/60/59/58/80/720x532/kitchen.jpg">'
+                '<img src="https://imgar.zonapropcdn.com/avisos/resize/1/00/60/59/58/80/1200x1200/front.jpg">'
+                '<img src="https://imgar.zonapropcdn.com/avisos/1/00/60/59/58/81/720x532/neighbor.jpg">')
+        images = photos_by_id(BeautifulSoup(html, "html.parser"))
+        self.assertEqual(len(images["60595880"]), 2)
+        self.assertNotIn("neighbor.jpg", str(images["60595880"]))
+        listing = {"id": "zp-60595880", "photos": [images["60595880"][0]],
+                   "photo": images["60595880"][0]}
+        add_gallery(listing, images["60595880"] + images["60595881"])
+        self.assertEqual(len(listing["photos"]), 2)
+        self.assertNotIn("neighbor.jpg", str(listing["photos"]))
 
     def test_limit_uses_real_result_count_not_recommendations(self):
         soup=BeautifulSoup("<h1>4 Casas en alquiler en Mataderos, CABA</h1>","html.parser")
