@@ -131,6 +131,31 @@ def visible_image(card):
     return None
 
 
+# Zonaprop sometimes appends "also in nearby cities" recommendations to a
+# neighborhood result page. Validate each card's actual location, not the
+# catalog URL, before calling it a CABA listing.
+WRONG_MARKET = re.compile(
+    r"\b(?:Mor[oó]n|Lomas del Mirador|La Matanza|Ramos Mej[ií]a|Ciudadela|"
+    r"San Justo|Tapiales|Villa Madero|Isidro Casanova|"
+    r"Haedo|Castelar|Ituzaing[oó]|Gonz[aá]lez Cat[aá]n|Rafael Castillo)\b", re.I
+)
+CABA_OUTSIDE_SCOPE = re.compile(
+    r"\b(?:Parque Avellaneda|Floresta|Flores|Villa Lugano|"
+    r"Villa Soldati|Caballito|Villa del Parque|Villa Real|Parque Chacabuco)\b", re.I
+)
+
+def listing_location(card):
+    node = card.select_one('[data-qa="POSTING_CARD_LOCATION"],[class*="postingLocations-module__location-text"]')
+    return node.get_text(" ", strip=True) if node else ""
+
+def inferred_bairro(location, requested):
+    if not location or WRONG_MARKET.search(location) or CABA_OUTSIDE_SCOPE.search(location):
+        return None
+    for name in sorted(NEIGHBORHOODS, key=len, reverse=True):
+        if re.search(r"(?<!\w)" + re.escape(name) + r"(?!\w)", location, re.I):
+            return name
+    return requested if re.search(r"Capital Federal|CABA", location, re.I) else None
+
 def extract_address(card, text, bairro):
     for selector in ('[data-qa*="LOCATION"]', '[class*="posting-location"]', '[class*="postingLocation"]',
                      '[class*="postingCard-module__posting-address"]', '[class*="postingCard-module__posting-location"]'):
@@ -156,19 +181,26 @@ def advertiser(card):
 
 def parsed_card(url, id_, card, bairro, kind):
     full_text = re.sub(r"\s+", " ", card.get_text(" ", strip=True))
+    actual_bairro = inferred_bairro(listing_location(card), bairro)
+    if not actual_bairro:
+        return None
+    bairro = actual_bairro
     price, cur = extract_price(full_text)
     if price is None:
         return None
-    room_match = ROOMS_RE.search(full_text)
-    bed_match = BEDS_RE.search(full_text)
+    # Use features next to the particular card, not suggested listings or
+    # arbitrary numerals in a long prose description.
+    features_node = card.select_one('[data-qa="POSTING_CARD_FEATURES"]')
+    features = features_node.get_text(" ", strip=True) if features_node else full_text[:260]
+    room_match = ROOMS_RE.search(features)
+    bed_match = BEDS_RE.search(features)
     rooms = int(room_match.group(1)) if room_match else 0
     beds = int(bed_match.group(1)) if bed_match else 0
-    # Include 3 ambientes as well as main target 4+, so the UI can filter.
-    if rooms and rooms < 3 and beds < 2:
+    # Only parse 3+ ambientes or 2+ bedrooms (default UI still filters
+    # to 4 ambientes / 3 bedrooms). Never infer a room from a random number.
+    if rooms < 3 and beds < 2:
         return None
-    if not rooms and beds < 2:
-        return None
-    area_match = AREA_RE.search(full_text)
+    area_match = AREA_RE.search(features)
     area = int(area_match.group(1)) if area_match else None
     if area is not None and area < 60:
         return None
@@ -211,6 +243,37 @@ def fetch(session, url):
     return soup, None
 
 
+def photos_by_id(soup):
+    """Attribute only CDN images whose path encodes the exact Zonaprop ad ID."""
+    result = {}
+    raw = str(soup)
+    # Images may appear in srcset, JSON-LD or adjacent gallery, outside the
+    # listing text block; constrain by the posting-id path to avoid mixups.
+    raw = raw.replace("\\/", "/").replace("&amp;", "&")
+    for match in re.finditer(r"https://imgar\.zonapropcdn\.com/avisos/[^\"'<>\s\\]+", raw, re.I):
+        url = match.group(0).rstrip("),;")
+        url = url.split("&quot;")[0]
+        path = urlsplit(url).path
+        group = re.search(r"/(?:\d{2}/){4,5}", path)
+        if not group:
+            continue
+        pairs = re.findall(r"\d{2}", group.group(0))
+        listing_id = "".join(pairs[-4:])
+        if len(listing_id) != 8:
+            continue
+        if not re.search(r"\.(?:jpe?g|webp|png)(?:$|\?)", url, re.I):
+            continue
+        if listing_id not in result:
+            result[listing_id] = url
+    return result
+
+def listing_count(soup, kind):
+    h1 = soup.find("h1")
+    title = h1.get_text(" ", strip=True) if h1 else ""
+    label = {"casas":"Casas", "ph":"PH", "departamentos":"Departamentos"}[kind]
+    matched = re.search(r"(\d[\d.]*)\s+" + label + r"\s+en\s+alquiler", title, re.I)
+    return int(matched.group(1).replace(".","")) if matched else None
+
 def run(names, kinds, limit, delay, stop_on_block=True):
     items, ids = {}, set()
     checked = reached = links = 0
@@ -231,6 +294,12 @@ def run(names, kinds, limit, delay, stop_on_block=True):
                 continue
             reached += 1
             sample = cards(soup)
+            advertised = listing_count(soup, kind)
+            # The HTML often contains 30 cards even if the header says just
+            # 4-8 matching properties: the rest are recommendations elsewhere.
+            if advertised is not None:
+                sample = dict(list(sample.items())[:min(advertised,30)])
+            available_photos = photos_by_id(soup)
             links += len(sample)
             added = 0
             for id_, (url, card) in sample.items():
@@ -238,6 +307,10 @@ def run(names, kinds, limit, delay, stop_on_block=True):
                     continue
                 row = parsed_card(url, id_, card, name, kind)
                 if row:
+                    image = available_photos.get(id_[3:])
+                    if image and not row["photo"]:
+                        row["photo"] = image
+                        row["photos"] = [image]
                     ids.add(id_)
                     items[id_] = row
                     added += 1
