@@ -267,9 +267,9 @@ async function verifyAllPhotos(){
 }
 var photoIndexes={};
 var photoDiscoveryPending=new Set(),photoDiscoveryDone=new Set();
-async function loadMorePhotos(id){
+async function loadMorePhotos(id,quiet){
  if(photoDiscoveryPending.has(id))return;
- if(photoDiscoveryDone.has(id)){toast('Não há mais fotos disponíveis aqui. Consulte o anúncio original.');return}
+ if(photoDiscoveryDone.has(id)){if(!quiet)toast('Não há outras fotos recuperáveis nesta fonte.');return}
  var listing=item(id);if(!listing||!listing.url)return;
  photoDiscoveryPending.add(id);render();
  try{
@@ -283,10 +283,13 @@ async function loadMorePhotos(id){
   }
   if(extra.length){
    verifiedImageCache[id]=original.concat(extra);
-   toast('✓ '+extra.length+' fotos adicionais carregadas');
-  }else toast('Não foi possível recuperar outras fotos. Abra a galeria do anúncio original.');
- }catch(e){toast('Galeria extra indisponível. Abra o anúncio original.')}
- finally{photoDiscoveryPending.delete(id);photoDiscoveryDone.add(id);render()}
+   if(!quiet)toast('✓ '+extra.length+' fotos adicionais carregadas');
+  }else if(!quiet)toast('Não foi possível recuperar outras fotos nesta fonte.');
+ }catch(e){if(!quiet)toast('Fotos adicionais indisponíveis nesta fonte.')}
+ finally{
+  photoDiscoveryPending.delete(id);photoDiscoveryDone.add(id);render();
+  if(lightboxId===id&&el('photoLightbox').classList.contains('open'))updateLightbox();
+ }
 }
 
 function photosFor(x){var validated=Object.prototype.hasOwnProperty.call(verifiedImageCache,x.id);var photos=validated?verifiedImageCache[x.id]:(Array.isArray(x.photos)?x.photos:[]).concat(x.photo?[x.photo]:[]);return Array.from(new Set(photos.filter(function(u){return typeof u==='string'&&/^https:\/\//.test(u)&&isOwnListingPhoto(u,x)})))}
@@ -729,7 +732,14 @@ el('cards').addEventListener('error',function(e){
  if((photoIndexes[id]||0)>=filtered.length)photoIndexes[id]=0;
  schedulePhotoRender();
 },true);
-el('cards').addEventListener('click',function(e){var a=e.target.closest('[data-advance]');if(a){setCardSlide(a.dataset.id,Number(a.dataset.advance));return}var image=e.target.closest('img[data-slide]');if(image){if(Date.now()-lastCardSwipeAt<700)return;openLightbox(image.dataset.zoom);return}var embed=e.target.closest('[data-sourcegallery]');if(embed){openSourceGallery(embed.dataset.sourcegallery);return}var more=e.target.closest('[data-expand]');if(more){loadMorePhotos(more.dataset.expand);return}var z=e.target.closest('[data-zoom]');if(z){openLightbox(z.dataset.zoom);return}var t=e.target.closest('[data-rating]');if(t){var id=t.getAttribute('data-id'),what=t.getAttribute('data-rating');saveReview(id,{rating:(state.ratings[id]||{}).rating===what?'':what})}});
+el('cards').addEventListener('click',function(e){var a=e.target.closest('[data-advance]');if(a){setCardSlide(a.dataset.id,Number(a.dataset.advance));return}var image=e.target.closest('img[data-slide]');if(image){
+ if(Date.now()-lastCardSwipeAt<700)return;
+ var x=item(image.dataset.zoom);openLightbox(image.dataset.zoom);
+ // Ask for additional Zonaprop gallery photos only when opened; no extra
+ // overlay controls, and never fetch other properties' pictures.
+ if(x&&listingPortal(x)==='Zonaprop'&&photosFor(x).length<=1&&!photoDiscoveryDone.has(x.id))loadMorePhotos(x.id,true);
+ return
+}var embed=e.target.closest('[data-sourcegallery]');if(embed){openSourceGallery(embed.dataset.sourcegallery);return}var more=e.target.closest('[data-expand]');if(more){loadMorePhotos(more.dataset.expand);return}var z=e.target.closest('[data-zoom]');if(z){openLightbox(z.dataset.zoom);return}var t=e.target.closest('[data-rating]');if(t){var id=t.getAttribute('data-id'),what=t.getAttribute('data-rating');saveReview(id,{rating:(state.ratings[id]||{}).rating===what?'':what})}});
 el('cards').addEventListener('change',function(e){var t=e.target.closest('[data-note]');if(t)saveReview(t.getAttribute('data-note'),{note:t.value.slice(0,1200)})});
 load();
 refreshDollarMEP();
