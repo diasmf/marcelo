@@ -73,6 +73,13 @@ SOURCES = {
     "Gamez Propiedades": "https://www.gamezpropiedades.com.ar/",
     "Norde Propiedades": "https://www.nordepropiedades.com.ar/",
     "Tizado Villa Luro": "https://www.tizado.com/",
+    # Additional agencies discovered through local map/business search.
+    "Massaro Propiedades": "https://massaropropiedades.com.ar/",
+    "Gustavo Vega Propiedades": "https://gustavovegapropiedades.com.ar/",
+    "Martorell Propiedades": "https://martorellprop.com.ar/",
+    "Inmobiliaria Monferini SRL": "https://monferinisrl.com.ar/",
+    "SegurBA Propiedades": "https://www.segurba.com.ar/",
+    "Golden Haus Luro": "https://www.goldenhaus.com.ar/inmobiliaria/",
 }
 PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|properties/(?:departamento|casa|ph)/[^/?#]+/[^/?#]+|listings/[^/?#]+|propiedad-\d+-[^/?#]+|ficha/[^/?#]+|propiedad\.asp|vitalefeol-\d+|(?:casa|ph|departamento)-en-(?:alquiler|venta)-en-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
@@ -176,6 +183,18 @@ def candidates(session, base, limit=50):
         category_paths = ["/Alquiler", "/home_properties/"]
     elif "tizado.com" in host:
         category_paths = ["/propiedades", "/alquiler"]
+    elif "massaropropiedades.com.ar" in host:
+        category_paths = ["/propiedades"]
+    elif "gustavovegapropiedades.com.ar" in host:
+        category_paths = ["/propiedades"]
+    elif "martorellprop.com.ar" in host:
+        category_paths = ["/inmuebles/alquiler/", "/inmuebles/venta/"]
+    elif "monferinisrl.com.ar" in host:
+        category_paths = ["/propiedades/"]
+    elif "segurba.com.ar" in host:
+        category_paths = ["/alquiler.php", "/venta.php"]
+    elif "goldenhaus.com.ar" in host:
+        category_paths = ["/inmobiliaria/"]
     elif "varcasiapropiedades.com.ar" in host:
         category_paths = ["/Alquiler", "/Propiedades"]
     elif any(domain in host for domain in (
@@ -204,7 +223,11 @@ def candidates(session, base, limit=50):
         soup = BeautifulSoup(html, "html.parser")
         for a in soup.select("a[href]"):
             url = urljoin(page, a["href"])
-            if same_host(urlsplit(url).hostname, host) and PROPERTY_PATH.search(urlsplit(url).path):
+            if same_host(urlsplit(url).hostname, host) and (
+                PROPERTY_PATH.search(urlsplit(url).path)
+                or ("martorellprop.com.ar" in host and page.rstrip("/").endswith(("/inmuebles/alquiler", "/inmuebles/venta"))
+                    and re.search(r"/[^/?#]*(?:casa|ambientes|depto|ph-)[^/?#]*/?$", urlsplit(url).path, re.I))
+            ):
                 found.add(clean_url(url))
     # Prefer rental detail links before general sale inventory when scanning is capped.
     found = {u for u in found if not urlsplit(u).path.lower().startswith(("/s/", "/propiedades/venta", "/propiedades/alquiler"))}
