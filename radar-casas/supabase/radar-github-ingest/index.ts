@@ -141,6 +141,60 @@ async function ingest(rows: Incoming[], sourceNames: string[]) {
   }
   return reply({ok: rejected===0, inserted, updated, rejected, errors, sources: sourceNames.length}, rejected ? 422 : 200);
 }
+// Daily source availability checks. Only a second 404/410 on a different
+// day can hide a listing; 403, 429, timeouts and server errors never remove it.
+// Feedback is stored separately and is never deleted by this endpoint.
+async function processAvailability(checks: {url:string,status:number}[]) {
+  if (checks.length > 55) return reply({error:"too-many-checks"},413);
+  const now=new Date(), iso=now.toISOString(), day=20*3600*1000, resetAfter=7*24*3600*1000;
+  let checked=0, removed=0, firstMissing=0, resumed=0, rejected=0;
+  const errors: Record<string,number>={};
+  for (const item of checks) {
+    try {
+      if (!item || typeof item.url!=="string" || item.url.length>900 || !host(item.url) ||
+          ![200,404,410].includes(item.status)) throw Error("invalid-check");
+      const matches=await db("radar_caba_listings","GET",{select:"id,url,listing_status,status_reason",url:"eq."+item.url,limit:"1"}) as Record<string,unknown>[];
+      if (!matches.length) throw Error("unknown-listing");
+      const listing=matches[0];
+      const records=await db("radar_caba_source_health","GET",{select:"url,missing_consecutive,first_missing_at,last_missing_at",url:"eq."+item.url,limit:"1"}) as Record<string,unknown>[];
+      const previous=records[0]||null;
+      let health: Record<string,unknown>;
+      if(item.status===200){
+        health={missing_consecutive:0,first_missing_at:null,last_missing_at:null,last_seen_at:iso,last_checked_at:iso,last_http_status:200};
+        if(previous?.missing_consecutive && Number(previous.missing_consecutive)>0)resumed++;
+        // Do not reactivate an inactive listing just because a homepage returns 200.
+        const changes: Record<string,unknown>={status_checked_at:iso};
+        if(typeof listing.status_reason==="string" && listing.status_reason.startsWith("Fonte original retornou HTTP")) changes.status_reason=null;
+        await db("radar_caba_listings","PATCH",{id:"eq."+String(listing.id)},changes);
+      }else{
+        const last=previous?.last_missing_at?new Date(String(previous.last_missing_at)).getTime():0;
+        const interval=last?now.getTime()-last:0;
+        const earlier=Number(previous?.missing_consecutive||0);
+        const miss=interval>=day && interval<=resetAfter?Math.min(20,earlier+1):interval<day&&last?Math.max(1,earlier):1;
+        health={missing_consecutive:miss,first_missing_at:miss===1?(interval<day&&last?previous?.first_missing_at||iso:iso):previous?.first_missing_at||iso,
+          last_missing_at:iso,last_checked_at:iso,last_http_status:item.status};
+        const changes: Record<string,unknown>={status_checked_at:iso};
+        if(miss>=2 && listing.listing_status!=="inactive"){
+          changes.listing_status="inactive";
+          changes.status_reason="Fonte original retornou HTTP "+item.status+" em dias distintos";
+          removed++;
+        }else if(miss===1 && listing.listing_status!=="inactive"){
+          changes.status_reason="Fonte original retornou HTTP "+item.status+" uma vez; aguardando segunda verificação";
+          firstMissing++;
+        }
+        await db("radar_caba_listings","PATCH",{id:"eq."+String(listing.id)},changes);
+      }
+      if(previous) await db("radar_caba_source_health","PATCH",{url:"eq."+item.url},health);
+      else await db("radar_caba_source_health","POST",null,{url:item.url,...health});
+      checked++;
+    }catch(e){
+      rejected++;
+      const reason=e instanceof Error?e.message.slice(0,70):"unknown";
+      errors[reason]=(errors[reason]||0)+1;
+    }
+  }
+  return reply({ok:rejected===0,checked,removed,first_missing:firstMissing,resumed,rejected,errors},rejected?422:200);
+}
 Deno.serve(async req => {
   if (req.method !== "POST") return reply({error:"method-not-allowed"},405);
   const length = Number(req.headers.get("content-length") || "0");
@@ -151,6 +205,7 @@ Deno.serve(async req => {
     if (text.length > 900000) return reply({error:"body-too-large"},413);
     const data = JSON.parse(text);
     if (data.kind === "probe") return reply({ok:true, auth:"github-oidc", repository:identity.repository, run_id:identity.run_id});
+    if (data.kind === "availability" && Array.isArray(data.checks)) return await processAvailability(data.checks);
     if (data.kind !== "upsert" || !Array.isArray(data.listings) || !Array.isArray(data.sources) || data.sources.length > 20) return reply({error:"invalid-request"},400);
     if (!data.sources.every((s:unknown)=>typeof s==="string"&&s.length<130)) return reply({error:"invalid-sources"},400);
     return await ingest(data.listings, data.sources);
