@@ -29,6 +29,21 @@ for url in CATEGORIES:
         if r.status_code==200 and url.endswith("casas-alquiler-mataderos.html"):
             from zonaprop_collector import cards
             sample=cards(h)
+            target=h.select_one('a[href*="53716927.html"]') or h.select_one('a[href*="/propiedades/clasificado/"]')
+            if target:
+                parents=[]
+                for anc in list(target.parents)[:12]:
+                    if not getattr(anc,"name",None):continue
+                    imgs=anc.select('img')
+                    parents.append({"tag":anc.name,"cls":anc.get("class"),"links":len(anc.select('a[href*="/propiedades/clasificado/"]')),"images":len(imgs),"img_attrs":[dict(x.attrs) for x in imgs[:2]],"text_len":len(anc.get_text(" ",strip=True))})
+                print("ANCESTORS_DEBUG",json.dumps(parents,ensure_ascii=False),flush=True)
+            ld=[]
+            for tag in h.select('script[type="application/ld+json"]'):
+                raw=tag.string or tag.get_text()
+                if raw and ('53716927' in raw or 'Pola 1411' in raw):
+                    ld.append(raw[:2500])
+            print("JSONLD_DEBUG",json.dumps(ld[:3],ensure_ascii=False),flush=True)
+            print("BODY_PHOTO_COUNTS",json.dumps({"imgs":len(h.select('img')),"og":len(h.select('meta[property="og:image"]')),"img_samples":[dict(a.attrs) for a in h.select('img')[:8]]},ensure_ascii=False),flush=True)
             if sample:
                 key,(su,card)=next(iter(sample.items()))
                 imgs=card.select("img")
