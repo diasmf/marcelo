@@ -496,6 +496,7 @@ def main():
     ap.add_argument("--source-limit", type=int, default=0, help="test only N configured agencies")
     ap.add_argument("--source-offset", type=int, default=0, help="skip initial agencies in the config")
     ap.add_argument("--emit-json", action="store_true", help="print eligible candidate records during read-only validation")
+    ap.add_argument("--export-path", default="", help="write eligible rows and scanned source names for secure GitHub OIDC ingestion")
     ap.add_argument("--source-name", default="", help="test only the specified agency")
     ap.add_argument("--browser", action="store_true", help="discover listings using browser-rendered agency catalogues")
     args = ap.parse_args()
@@ -508,6 +509,7 @@ def main():
     endpoint = db_url + "/rest/v1/radar_caba_listings"
     stats = {"sources": 0, "candidates": 0, "eligible": 0, "inserted": 0, "existing": 0, "errors": 0, "reasons": {}, "source_status": {}}
     sources = list(SOURCES.items())
+    exported_rows = []
     if args.source_name:
         sources = [(name,base) for name,base in sources if name.lower()==args.source_name.lower()]
     else:
@@ -552,6 +554,7 @@ def main():
                     print(json.dumps({"sample_url": url, "reason": reason}, ensure_ascii=False))
             if row:
                 stats["eligible"] += 1
+                exported_rows.append(row)
                 if args.apply:
                     try:
                         action = save(session, row, endpoint, key)
@@ -565,6 +568,14 @@ def main():
                 print(json.dumps({"candidate": row, "result": action} if args.emit_json else {"url": url, "rooms": row["beds"], "price": row["price"], "result": action}, ensure_ascii=False))
             time.sleep(0.2)
         time.sleep(0.3)
+    if args.export_path:
+        # Empty sources are uploaded too, so the ingest endpoint can be tested
+        # even when a valid search finds no properties matching the target.
+        from pathlib import Path
+        target = Path(args.export_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({"kind": "upsert", "sources": [name for name, base in sources], "listings": exported_rows}, ensure_ascii=False), encoding="utf-8")
+        print(json.dumps({"exported": str(target), "eligible_rows": len(exported_rows)}, ensure_ascii=False))
     print(json.dumps({"summary": stats}, ensure_ascii=False))
     return 0
 
