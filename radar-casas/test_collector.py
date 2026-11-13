@@ -86,6 +86,17 @@ class AgencyCatalogDiscoveryTests(unittest.TestCase):
                     found = candidates(None, base, limit=20)
                 self.assertIn(detail.rstrip("/"), found)
 
+    def test_martorell_wordpress_property_slugs(self):
+        base = "https://martorellprop.com.ar/"
+        detail = "https://martorellprop.com.ar/villa-luro-us-129-000-depto-de-4-ambientes/"
+        def fake_fetch(_session, url):
+            if url == base + "inmuebles/venta/":
+                return '<a href="' + detail + '">VILLA LURO: Depto de 4 ambientes</a>'
+            return ""
+        with patch("collector.fetch", side_effect=fake_fetch):
+            found = candidates(None, base, limit=20)
+        self.assertIn(detail.rstrip("/"), found)
+
     def test_gamez_query_identifies_individual_property(self):
         base = "https://www.gamezpropiedades.com.ar/"
         def fake_fetch(_session, url):
