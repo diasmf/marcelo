@@ -6,6 +6,7 @@ import time
 from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
+from zonaprop_collector import photos_by_id
 CATEGORIES=[
 "https://www.zonaprop.com.ar/casas-alquiler-mataderos.html",
 "https://www.zonaprop.com.ar/ph-alquiler-mataderos.html",
@@ -54,6 +55,18 @@ for url in CATEGORIES:
                 parents=list(first.parents)[:9]
                 print("FIRST_ANCHOR",json.dumps({"href":first.get("href"),"text":first.get_text(" ",strip=True)[:180],"parent_layers":[{"tag":p.name,"class":p.get("class"),"data_qa":p.get("data-qa"),"data_id":p.get("data-id"),"text_len":len(p.get_text(" ",strip=True))} for p in parents if getattr(p,"name",None)],"parent_3_html":str(parents[3])[:6000],"parent_5_html":str(parents[5])[:11000]},ensure_ascii=False),flush=True)
             print("QA_ELEMENTS",json.dumps([{"tag":x.name,"qa":x.get("data-qa"),"tag_class":x.get("class"),"text":x.get_text(" ",strip=True)[:65]} for x in h.select("[data-qa]")[:55]],ensure_ascii=False),flush=True)
+        if r.status_code==200:
+            groups=photos_by_id(h)
+            print("PHOTO_DIAGNOSTIC "+json.dumps({"url":url,"groups":len(groups),"with_three":sum(1 for v in groups.values() if isinstance(v,list) and len(v)>=3),"samples":list(groups.items())[:5],"jsonld":len(h.select('script[type="application/ld+json"]'))},ensure_ascii=False),flush=True)
+            if "casas-alquiler-mataderos" in url and links:
+                detail_url=urljoin(url,links[0][0])
+                try:
+                    d=requests.get(detail_url,headers=HEADERS,timeout=14)
+                    ds=BeautifulSoup(d.text,"html.parser")
+                    images=photos_by_id(ds)
+                    print("DETAIL_DIAGNOSTIC "+json.dumps({"url":detail_url,"status":d.status_code,"groups":len(images),"first":list(images.items())[:2]},ensure_ascii=False),flush=True)
+                except requests.RequestException as exc:
+                    print("DETAIL_DIAGNOSTIC "+json.dumps({"url":detail_url,"error":str(exc)[:160]},ensure_ascii=False),flush=True)
         print(json.dumps({"url":url,"status":r.status_code,"bytes":len(r.content),"final_url":r.url,"title":h.title.get_text(" ",strip=True) if h.title else None,"links":len(links),"examples":links[:4],"card_samples":attrs,"jsonld":len(h.select('script[type="application/ld+json"]')),"next_data":bool(h.select_one("script#__NEXT_DATA__")),"challenge":bool(re.search(r"captcha|just a moment|access denied|enable javascript",h.title.get_text(" ",strip=True) if h.title else "",re.I))},ensure_ascii=False),flush=True)
     except requests.RequestException as e: print(json.dumps({"url":url,"error":str(e)[:180]},ensure_ascii=False),flush=True)
     time.sleep(.65)
