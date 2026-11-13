@@ -38,6 +38,17 @@ with sync_playwright() as p:
     print("UI_COUNTS",json.dumps({"cards":total,"zonaprop_cards":zcards,"photo_elements":photos,"extra_photo_buttons":buttons,"page_errors":errors[:3]}),flush=True)
     if total==0 or photos==0 or buttons:
         raise AssertionError("No cards/photos or unused overlay buttons still visible")
+    # A multi-photo card must actually change the displayed image and count.
+    multi=page.locator("article.card:has(.photo-next)").first
+    assert multi.count(), "At least one property should expose multiple photos"
+    first_src=multi.locator("img.slide:visible").first.get_attribute("src")
+    first_counter=multi.locator(".photo-count").inner_text()
+    multi.locator("button.photo-next").click()
+    second_src=multi.locator("img.slide:visible").first.get_attribute("src")
+    second_counter=multi.locator(".photo-count").inner_text()
+    assert first_src != second_src, "Next arrow did not change the photo"
+    assert first_counter != second_counter, "Next arrow did not update the counter"
+    print("UI_NEXT_PHOTO_PASS",json.dumps({"before":first_counter,"after":second_counter}),flush=True)
     img=page.locator("article.card img.slide[data-zoom]:visible").first
     img.scroll_into_view_if_needed()
     img.click(timeout=6000)
