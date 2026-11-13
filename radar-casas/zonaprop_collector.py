@@ -257,28 +257,52 @@ def fetch(session, url):
 
 
 def photos_by_id(soup):
-    """Attribute only CDN images whose path encodes the exact Zonaprop ad ID."""
+    """Return distinct gallery URLs per ad ID, never photos from another listing."""
     result = {}
-    raw = str(soup)
-    # Images may appear in srcset, JSON-LD or adjacent gallery, outside the
-    # listing text block; constrain by the posting-id path to avoid mixups.
-    raw = raw.replace("\\/", "/").replace("&amp;", "&")
+    seen = {}
+    raw = str(soup).replace("\\/", "/").replace("\\u002F", "/").replace("\\u002f", "/").replace("&amp;", "&")
     for match in re.finditer(r"https://imgar\.zonapropcdn\.com/avisos/[^\"'<>\s\\]+", raw, re.I):
-        url = match.group(0).rstrip("),;")
-        url = url.split("&quot;")[0]
+        url = match.group(0).rstrip("),;").split("&quot;")[0]
         path = urlsplit(url).path
         group = re.search(r"/(?:\d{2}/){4,5}", path)
-        if not group:
+        if not group or not re.search(r"\.(?:jpe?g|webp|png)$", path, re.I):
             continue
-        pairs = re.findall(r"\d{2}", group.group(0))
-        listing_id = "".join(pairs[-4:])
+        listing_id = "".join(re.findall(r"\d{2}", group.group(0))[-4:])
         if len(listing_id) != 8:
             continue
-        if not re.search(r"\.(?:jpe?g|webp|png)(?:$|\?)", url, re.I):
+        filename = path.rsplit("/", 1)[-1]
+        seen.setdefault(listing_id, set())
+        if filename in seen[listing_id] or len(result.get(listing_id, [])) >= 16:
             continue
-        if listing_id not in result:
-            result[listing_id] = url
+        result.setdefault(listing_id, []).append(url)
+        seen[listing_id].add(filename)
     return result
+
+
+def add_gallery(row, urls):
+    """Add photos belonging only to this Zonaprop ID, deduplicated by image file."""
+    own_id = row["id"][3:].zfill(8)
+    directory = "/"+"/".join(own_id[i:i+2] for i in range(0, 8, 2))+"/"
+    merged = []
+    seen = set()
+    for u in row.get("photos", []) + list(urls):
+        try:
+            parsed = urlsplit(u)
+        except (TypeError, ValueError):
+            continue
+        if (parsed.scheme != "https" or parsed.hostname != "imgar.zonapropcdn.com"
+                or directory not in parsed.path or not re.search(r"\.(?:jpe?g|webp|png)$", parsed.path, re.I)):
+            continue
+        filename = parsed.path.rsplit("/", 1)[-1]
+        if filename in seen:
+            continue
+        seen.add(filename)
+        merged.append(u)
+        if len(merged) >= 16:
+            break
+    row["photos"] = merged
+    row["photo"] = merged[0] if merged else None
+    return row
 
 def listing_count(soup, kind):
     h1 = soup.find("h1")
@@ -320,10 +344,7 @@ def run(names, kinds, limit, delay, stop_on_block=True):
                     continue
                 row = parsed_card(url, id_, card, name, kind)
                 if row:
-                    image = available_photos.get(id_[3:])
-                    if image and not row["photo"]:
-                        row["photo"] = image
-                        row["photos"] = [image]
+                    add_gallery(row, available_photos.get(id_[3:].zfill(8), []))
                     ids.add(id_)
                     items[id_] = row
                     added += 1
