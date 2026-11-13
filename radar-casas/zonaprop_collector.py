@@ -210,6 +210,18 @@ def parsed_card(url, id_, card, bairro, kind):
     description = re.sub(r"\s+", " ", description).strip()[:1200]
     if not description:
         return None
+    # Recommendations sometimes appear on the result page with a misleading
+    # search-category location. Prefer a clear property description that names
+    # another neighborhood/city or says commercial-only.
+    first_desc = description[:360]
+    if re.search(r"(?:alquiler\s+comercial\s+exclusivamente|uso\s+comercial\s+exclusivo|exclusivamente\s+comercial)",first_desc,re.I):
+        return None
+    if re.search(r"(?:\ben\s+(?:el\s+)?(?:barrio\s+de\s+)?|\bubicad[ao]\s+en\s+)(?:Villa\s+Lugano|Parque\s+Avellaneda|Mor[oó]n|Lomas\s+del\s+Mirador)\b",first_desc,re.I):
+        return None
+    for real_bairro in sorted(NEIGHBORHOODS,key=len,reverse=True):
+        if re.search(r"(?:\ben\s+(?:el\s+)?(?:barrio\s+de\s+)?|\bubicad[ao]\s+en\s+)" + re.escape(real_bairro) + r"\b", first_desc, re.I):
+            bairro=real_bairro
+            break
     title = f"{KINDS[kind]} em aluguel · {rooms or '?'} ambientes · {bairro}"
     photo = visible_image(card)
     # Never assign neighboring carousel images to this property.
