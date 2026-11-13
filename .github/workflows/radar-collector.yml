@@ -6,6 +6,8 @@ on:
       - 'radar-casas/test_collector.py'
       - 'radar-casas/github_oidc_upload.py'
       - 'radar-casas/check_source_status.py'
+      - 'radar-casas/zonaprop_collector.py'
+      - 'radar-casas/test_zonaprop_collector.py'
       - '.github/workflows/radar-collector.yml'
   workflow_dispatch:
     inputs:
@@ -123,3 +125,32 @@ jobs:
         run: python radar-casas/check_source_status.py --shard ${{ matrix.shard }} --shards 5 --export-path /tmp/radar-status-${{ matrix.shard }}.json
       - name: Store reliable checks; only mark unavailable after two different days
         run: python radar-casas/github_oidc_upload.py --batch-path /tmp/radar-status-${{ matrix.shard }}.json
+
+  zonaprop:
+    # A portal source is separate from the 73 independent agency records.
+    if: github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencies
+        run: python -m pip install 'requests==2.32.5' 'beautifulsoup4==4.14.2'
+      - name: Unit tests
+        run: python -m unittest discover -s radar-casas -p 'test_zonaprop_collector.py' -v
+      - name: Scan public CABA rental catalogues (stop on HTTP 403)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            python radar-casas/zonaprop_collector.py --neighborhood Mataderos --max-pages 3 --export-path /tmp/zonaprop-batch.json
+          else
+            python radar-casas/zonaprop_collector.py --max-pages 21 --export-path /tmp/zonaprop-batch.json
+          fi
+      - name: Sync canonical listings and report source health using GitHub OIDC
+        run: python radar-casas/github_oidc_upload.py --batch-path /tmp/zonaprop-batch.json
