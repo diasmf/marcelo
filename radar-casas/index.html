@@ -515,16 +515,16 @@ function render(){
    var rents=listings.filter(function(x){return x.mode==='aluguel'});
    var nonInactive=listings.filter(function(x){return x.listing_status!=='inactive'});
    var status=a.audit_status||'not_checked',found=Number(a.audit_links_found||0);
-   var statusLabel=status==='links_found'?'Links identificados (coleta parcial)':status==='unreachable'?'Falha de acesso no teste':status==='no_links'?'Nenhum link detectado (ainda não validado)':'Ainda sem teste registrado';
+   var statusLabel=status==='links_found'?'Links identificados (coleta parcial)':status==='unreachable'?'Falha de acesso no teste':status==='no_links'?'Nenhum link detectado (ainda não validado)':status==='discovered_no_catalogue'?'Encontrada no mapa · sem catálogo próprio confirmado':'Ainda sem teste registrado';
    var when=a.audit_checked_at?new Date(a.audit_checked_at).toLocaleDateString('pt-BR'):'';
-   var auditExtra=status==='links_found'?' · '+found+' links encontrados':(status==='unreachable'?' · verificar acesso à fonte':' · não significa ausência de imóveis');
+   var auditExtra=status==='links_found'?' · '+found+' links encontrados':(status==='unreachable'?' · verificar acesso à fonte':status==='discovered_no_catalogue'?' · verificar site ou anúncios próprios':' · não significa ausência de imóveis');
    var auditHref=a.audit_run_url?'<a href="'+safeUrl(a.audit_run_url)+'" target="_blank" rel="noopener noreferrer">Ver relatório da coleta ↗</a>':'';
    return '<div class="agent"><b>'+esc(a.name)+'</b><small>⌖ '+esc(a.bairro)+'</small>'+
     '<div class="agency-data"><strong>Anúncios no Radar</strong><span>'+listings.length+' anúncios cadastrados · '+rents.length+' aluguel · '+(listings.length-rents.length)+' venda · '+nonInactive.length+' não marcados inativos</span></div>'+
     '<div class="agency-data"><strong>Coleta verificada</strong><span>'+esc(statusLabel)+esc(auditExtra)+(when?' · '+esc(when):'')+'</span></div>'+
     (listings.length===0?'<small>Zero fichas cadastradas não significa zero anúncios no mercado.</small>':'')+
     '<button data-testagency="'+esc(name)+'" type="button">Ver imóveis desta imobiliária</button>'+
-    '<a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Ver anúncios na fonte ↗</a>'+auditHref+'</div>';
+    (a.url?'<a target="_blank" rel="noopener noreferrer" href="'+safeUrl(a.url)+'">Ver fonte ↗</a>':'<small>Site próprio não identificado</small>')+auditHref+'</div>';
   });
   el('agencyCards').innerHTML=agencyCards.join('');
   // Advertisers with real listings but without a verified independent
