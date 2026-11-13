@@ -371,6 +371,12 @@ def parse_property(html, url, agency):
         return None, "not residential"
     if not title or re.search(r"^(?:buscador de propiedades|b[uú]squeda de propiedades|propiedades|inmuebles|inicio|home)\b", title, re.I):
         return None, "generic search page"
+    # Some templates print "Alquiler" in a menu even on a sale-only detail.
+    # A priced operation next to the listing is more reliable than menu words.
+    priced_sale = re.search(r"\\b(?:venta|en venta)\\b\\s*(?:de\\s+)?(?:U\\$S|US\\$|USD|U\\$D|ARS|\\$)\\s*\\$?\\s*\\d", text[:1800], re.I)
+    priced_rent = re.search(r"\\b(?:alquiler|en alquiler)\\b\\s*(?:mensual\\s+)?(?:U\\$S|US\\$|USD|U\\$D|ARS|\\$)\\s*\\$?\\s*\\d", text[:1800], re.I)
+    if priced_sale and not priced_rent:
+        return None, "sale"
     if not RENT.search(lead):
         return None, "not rental"
     # Do not offer commercial-only properties to people looking for a home.
@@ -442,6 +448,16 @@ def parse_property(html, url, agency):
             images.append(candidate)
         if len(images) >= 30:
             break
+    # The Pablo Saullo template displays thumbnails of other listings in <main>.
+    # Only retain a file whose URL identifies this listing's street; no photo is
+    # preferable to showing a different house as if it were this one.
+    if agency == "Pablo Saullo e Hijos":
+        slug = urlsplit(url).path.rstrip("/").rsplit("/", 1)[-1]
+        street = re.split(r"[-_]", slug, maxsplit=1)[0].lower()
+        if len(street) >= 5:
+            images = [image for image in images if street in urlsplit(image).path.lower()]
+        else:
+            images = []
     category = "PH" if re.search(r"\bph\b|propiedad horizontal", title, re.I) else ("Casa" if re.search("casa|chalet|duplex|dúplex|triplex", title, re.I) else "Departamento")
     stable_id = "agency-" + hashlib.sha256(url.encode()).hexdigest()[:20]
     return {
