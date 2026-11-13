@@ -82,7 +82,17 @@ function clean(x: Incoming, sourceHost: string) {
   if (area != null && (!Number.isFinite(area) || area < 60 || area > 10000)) throw Error("invalid-area");
   const beds = Number(x.beds);
   if (!Number.isSafeInteger(beds) || beds < 0 || beds > 12) throw Error("invalid-beds");
-  const photos = Array.isArray(x.photos) ? [...new Set(x.photos.filter((p: unknown) => typeof p === "string" && /^https:\/\//i.test(p) && p.length < 1000))].slice(0,20) : [];
+  const photoList = Array.isArray(x.photos) ? x.photos : [];
+  const dir = portal ? "/" + (String(x.id).slice(3).padStart(8,"0").match(/.{2}/g)||[]).join("/") + "/" : "";
+  const photos = [...new Set(photoList.filter((p: unknown) => {
+    if (typeof p !== "string" || p.length > 1000 || !/^https:\/\//i.test(p)) return false;
+    if (!portal) return true;
+    try {
+      const u = new URL(p);
+      return u.hostname === "imgar.zonapropcdn.com" && u.pathname.includes(dir) &&
+        /\.(?:jpe?g|png|webp)$/i.test(u.pathname);
+    } catch { return false; }
+  }))].slice(0,20);
   return {
     id: String(x.id), url: String(x.url), agency: String(x.agency).slice(0,120), mode: "aluguel",
     bairro: String(x.bairro), tipo: String(x.tipo),
@@ -131,8 +141,23 @@ async function ingest(rows: Incoming[], sourceNames: string[]) {
         };
         if (row.area !== null) changes.area = row.area;
         if (Number(row.beds) > 0) changes.beds = row.beds;
-        // Preserve manually curated addresses and photographs.
-        if (!existing.photo && row.photo) { changes.photo = row.photo; changes.photos = row.photos; }
+        // Preserve curated photos, but enrich existing Zonaprop records with
+        // more images of the SAME listing. Deduplicate resized copies by filename.
+        if (sourceName === "Zonaprop") {
+          const before = Array.isArray(existing.photos) ? existing.photos.filter((p: unknown) => typeof p === "string") as string[] : [];
+          const seen = new Set(before.map(p => { try { return new URL(p).pathname.split("/").pop(); } catch { return p; } }));
+          const additions = row.photos.filter(p => {
+            const file = new URL(p).pathname.split("/").pop();
+            if (seen.has(file)) return false;
+            seen.add(file);
+            return true;
+          });
+          if (additions.length) changes.photos = before.concat(additions).slice(0,20);
+          if (!existing.photo && row.photo) changes.photo = row.photo;
+        } else if (!existing.photo && row.photo) {
+          changes.photo = row.photo;
+          changes.photos = row.photos;
+        }
         if (existing.listing_status === "inactive") {
           changes.listing_status = "pending";
           changes.status_reason = sourceName === "Zonaprop" ? "Seen in current Zonaprop rental search" : "Seen on originating agency site";
