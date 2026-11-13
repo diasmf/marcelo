@@ -373,8 +373,8 @@ def parse_property(html, url, agency):
         return None, "generic search page"
     # Some templates print "Alquiler" in a menu even on a sale-only detail.
     # A priced operation next to the listing is more reliable than menu words.
-    priced_sale = re.search(r"\\b(?:venta|en venta)\\b\\s*(?:de\\s+)?(?:U\\$S|US\\$|USD|U\\$D|ARS|\\$)\\s*\\$?\\s*\\d", text[:1800], re.I)
-    priced_rent = re.search(r"\\b(?:alquiler|en alquiler)\\b\\s*(?:mensual\\s+)?(?:U\\$S|US\\$|USD|U\\$D|ARS|\\$)\\s*\\$?\\s*\\d", text[:1800], re.I)
+    priced_sale = re.search(r"\b(?:venta|en venta)\b\s*(?:de\s+)?(?:U\$S|US\$|USD|U\$D|ARS|\$)\s*\$?\s*\d", text[:1800], re.I)
+    priced_rent = re.search(r"\b(?:alquiler|en alquiler)\b\s*(?:mensual\s+)?(?:U\$S|US\$|USD|U\$D|ARS|\$)\s*\$?\s*\d", text[:1800], re.I)
     if priced_sale and not priced_rent:
         return None, "sale"
     if not RENT.search(lead):
