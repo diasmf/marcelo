@@ -4,6 +4,18 @@
 
 Esta auditoria testa acesso ao site, descoberta de links e leitura de uma amostra de fichas, com uma segunda tentativa por navegador Chromium para os casos não confirmados. **Uma ficha legível não comprova que todas as ofertas foram coletadas nem que a gravação em banco funcionou.** Falha de acesso não comprova ausência de imóveis.
 
+## Ajustes após a auditoria (12/11/2026)
+
+- As cinco fontes com fichas verificadas mas fora da coleta foram integradas ao coletor principal: Carro Propiedades, Enrique Cannone Propiedades, Jakim Propiedades, Pablo Saullo e Hijos e RE/MAX Fly Liniers. Testes específicos encontram links em todas elas.
+- O coletor principal agora tem 62 nomes de fontes configurados; a cobertura de fontes permanece distinta da contagem de 73 imobiliárias cadastradas.
+- Uma falha real de parsing foi corrigida: menu com a palavra "Alquiler" não pode converter em aluguel um anúncio marcado como **Venta USD**. O caso de Pablo Saullo retornava 2 falsos positivos; depois da correção, 0 na mesma amostra.
+- Miniaturas de propriedades relacionadas do Pablo Saullo foram excluídas quando não correspondem ao imóvel da ficha.
+- Os links oficiais de Fedele Inmobiliaria e Jorge Reale foram localizados; o coletor deixou de depender dos perfis Argenprop para essas duas fontes. O novo catálogo da Fedele ainda está pendente de validação.
+- **Proppies é um portal, não uma imobiliária**: 91 anúncios do radar vêm de lá, associados a 49 nomes de anunciantes após limpeza de ruído de avaliações. Os cards diferenciam anunciante e plataforma; quando há site próprio registrado, incluem esse link. Não suprimimos supostas duplicatas sem confirmação da identidade do imóvel.
+- **Ponto operacional bloqueado**: a execução diária de 12/11/2026 tinha as variáveis `RADAR_SUPABASE_URL` e `RADAR_SUPABASE_SERVICE_ROLE_KEY` vazias no GitHub Actions e realizou apenas dry-run. As fontes estão configuradas, mas **novas gravações automáticas dependem da configuração segura desses dois segredos**. O workflow agora sinaliza esse modo explicitamente.
+
+[Validação das cinco novas fontes](https://github.com/diasmf/marcelo/actions/runs/43341125973)
+
 ## Resumo
 
 | Situação | Imobiliárias |
