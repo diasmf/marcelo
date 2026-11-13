@@ -26,6 +26,13 @@ for url in CATEGORIES:
                         attrs.append({"tag":ancestor.name,"class":ancestor.get("class"),"qa":ancestor.get("data-qa"),"data_id":ancestor.get("data-id"),"summary":ancestor.get_text(" ",strip=True)[:480]})
                         break
                 if len(attrs)>=2:break
+        if r.status_code==200 and url.endswith("casas-alquiler-mataderos.html"):
+            from zonaprop_collector import cards
+            sample=cards(h)
+            if sample:
+                key,(su,card)=next(iter(sample.items()))
+                imgs=card.select("img")
+                print("CARD_DEBUG",json.dumps({"id":key,"url":su,"card_html":str(card)[:6500],"img_attrs":[dict(x.attrs) for x in imgs[:8]],"pictures":[str(x)[:500] for x in card.select("picture,source")[:6]],"backgrounds":[str(x)[:400] for x in card.select("[style]")[:4]],"card_classes":card.get("class"),"card_text":card.get_text(" ",strip=True)[:900]},ensure_ascii=False),flush=True)
         if url.endswith("casas-alquiler-mataderos.html"):
             first=h.select_one('a[href*="/propiedades/clasificado/"]')
             if first:
