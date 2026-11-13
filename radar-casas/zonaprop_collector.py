@@ -6,6 +6,7 @@ browser-fingerprint evasion, or attempts to bypass HTTP 403. Source failures are
 reported explicitly and never cause records to be marked inactive.
 """
 import argparse
+import datetime
 import json
 import re
 import sys
@@ -311,10 +312,13 @@ def listing_count(soup, kind):
     matched = re.search(r"(\d[\d.]*)\s+" + label + r"\s+en\s+alquiler", title, re.I)
     return int(matched.group(1).replace(".","")) if matched else None
 
-def run(names, kinds, limit, delay, stop_on_block=True):
+def run(names, kinds, limit, delay, stop_on_block=True, detail_gallery_max=2):
     items, ids = {}, set()
     checked = reached = links = 0
     failures = []
+    detail_checks = 0
+    more_photos = 0
+    details_blocked = False
     with requests.Session() as session:
         for name, kind, cat_url in category_urls(names, kinds):
             if limit and checked >= limit:
@@ -348,6 +352,30 @@ def run(names, kinds, limit, delay, stop_on_block=True):
                     ids.add(id_)
                     items[id_] = row
                     added += 1
+            # A search card often contains only a thumbnail. Fetch a small,
+            # rotating sample of exact detail pages to add the *real* gallery
+            # images. Stop on any portal block, without trying to evade it.
+            if detail_gallery_max and not details_blocked:
+                current = [items[k] for k in sample if k in items]
+                if current:
+                    start = (datetime.date.today().toordinal() * max(1, detail_gallery_max)) % len(current)
+                    for offset in range(min(detail_gallery_max, len(current))):
+                        row = current[(start + offset) % len(current)]
+                        if len(row["photos"]) >= 8:
+                            continue
+                        details, detail_error = fetch(session, row["url"])
+                        detail_checks += 1
+                        if detail_error:
+                            if detail_error in ("HTTP 403", "HTTP 429", "challenge"):
+                                details_blocked = True
+                                print(json.dumps({"gallery": "blocked", "reason": detail_error,
+                                                  "stopping_detail_requests": True}), flush=True)
+                                break
+                            continue
+                        before = len(row["photos"])
+                        add_gallery(row, photos_by_id(details).get(row["id"][3:].zfill(8), []))
+                        more_photos += max(0, len(row["photos"]) - before)
+                        time.sleep(delay)
             print(json.dumps({"category": cat_url, "status": "HTTP 200", "linked_cards": len(sample), "relevant": added}, ensure_ascii=False), flush=True)
             time.sleep(delay)
     status = ("ok" if reached == checked and reached > 0 and len(items) > 0 else
@@ -357,6 +385,7 @@ def run(names, kinds, limit, delay, stop_on_block=True):
     return list(items.values()), {
         "source": SOURCE, "status": status, "pages_checked": checked,
         "pages_reached": reached, "listing_links": links, "listings_parsed": len(items),
+        "detail_pages_checked": detail_checks, "extra_gallery_photos": more_photos,
         "last_error": failures[0]["reason"] if failures else None
     }
 
@@ -368,8 +397,9 @@ def main():
     parser.add_argument("--neighborhood", choices=list(NEIGHBORHOODS), action="append")
     parser.add_argument("--type", choices=list(KINDS), action="append")
     parser.add_argument("--delay", type=float, default=1.35)
+    parser.add_argument("--detail-gallery-max", type=int, default=2, help="max property detail gallery lookups per catalog, stop when blocked")
     args = parser.parse_args()
-    listings, report = run(args.neighborhood, args.type, max(0, args.max_pages), max(.7, args.delay))
+    listings, report = run(args.neighborhood, args.type, max(0, args.max_pages), max(.7, args.delay), detail_gallery_max=max(0,min(4,args.detail_gallery_max)))
     path = Path(args.export_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"kind": "upsert", "sources": [SOURCE], "listings": listings,
