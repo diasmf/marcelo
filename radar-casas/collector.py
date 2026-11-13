@@ -80,8 +80,14 @@ SOURCES = {
     "Inmobiliaria Monferini SRL": "https://monferinisrl.com.ar/",
     "SegurBA Propiedades": "https://www.segurba.com.ar/",
     "Golden Haus Luro": "https://www.goldenhaus.com.ar/inmobiliaria/",
+    # Confirmed in the source audit, previously missing from the active collector.
+    "Carro Propiedades": "https://carropropiedades.com.ar/properties",
+    "Enrique Cannone Propiedades": "https://www.cannonepropiedades.com.ar/",
+    "Jakim Propiedades": "https://www.jakimpropiedades.com/",
+    "Pablo Saullo e Hijos": "https://pablosaulloehijos.com.ar/propiedades/",
+    "RE/MAX Fly Liniers": "https://www.remax-fly.com.ar/",
 }
-PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|properties/(?:departamento|casa|ph)/[^/?#]+/[^/?#]+|listings/[^/?#]+|propiedad-\d+-[^/?#]+|ficha/[^/?#]+|propiedad\.asp|vitalefeol-\d+|(?:casa|ph|departamento)-en-(?:alquiler|venta)-en-[^/?#]+)", re.I)
+PROPERTY_PATH = re.compile(r"/(?:propiedad(?:es)?/[^/?#]+|(?:casa|ph|departamento|duplex|triplex)[^/?#]*/[^/?#]+|(?:ph|casa|departamento)-alquiler-[^/?#]+/[^/?#]+|inmueble/[^/?#]+|ficha-[^/?#]+|(?:casa|ph|departamento)-en-(?:alquiler|venta)[^/?#]*ficha-[^/?#]+|p/\d{5,}-[^/?#]+|properties/(?:departamento|casa|ph)/[^/?#]+/[^/?#]+|properties-2/\d+-[^/?#]+|propiedades-en-[^/?#]+/[^/?#]+/(?:casa|ph|departamento|duplex|triplex)-en-(?:alquiler|venta)-[^/?#]+|listings/[^/?#]+|propiedad-\d+-[^/?#]+|ficha/[^/?#]+|propiedad\.asp|vitalefeol-\d+|(?:casa|ph|departamento)-en-(?:alquiler|venta)-en-[^/?#]+)", re.I)
 RENT = re.compile(r"\b(?:alquiler|alquila|en alquiler)\b", re.I)
 SOLD = re.compile(r"\b(?:alquilado|alquilada|reservado|reservada|vendido|vendida|no disponible|suspendido|suspendida)\b", re.I)
 SALE_ONLY = re.compile(r"\b(?:en venta|venta de|se vende)\b", re.I)
@@ -195,6 +201,16 @@ def candidates(session, base, limit=50):
         category_paths = ["/alquiler.php", "/venta.php"]
     elif "goldenhaus.com.ar" in host:
         category_paths = ["/inmobiliaria/"]
+    elif "carropropiedades.com.ar" in host:
+        category_paths = ["/properties", "/properties-2"]
+    elif "cannonepropiedades.com.ar" in host:
+        category_paths = ["/propiedades?ope=A", "/propiedades?ope=V", "/propiedades"]
+    elif "jakimpropiedades.com" in host:
+        category_paths = ["/propiedades?ope=A", "/propiedades?ope=V", "/propiedades"]
+    elif "pablosaulloehijos.com.ar" in host:
+        category_paths = ["/propiedades/", "/alquileres"]
+    elif "remax-fly.com.ar" in host:
+        category_paths = ["/propiedades-en-caba/departamentos-en-capital-federal", "/propiedades-en-caba/casas-en-capital-federal", "/propiedades-en-caba/ph-en-capital-federal"]
     elif "varcasiapropiedades.com.ar" in host:
         category_paths = ["/Alquiler", "/Propiedades"]
     elif any(domain in host for domain in (
@@ -262,6 +278,10 @@ def browser_candidates(base, agency, limit=80):
         pages=[base,urljoin(base,"/propiedades")]
     elif agency=="Magnacca Patelli Propiedades":
         pages=[base,urljoin(base,"/alquileres.php"),urljoin(base,"/alquiler.php")]
+    elif agency in ("Enrique Cannone Propiedades", "Jakim Propiedades"):
+        pages=[base]+[urljoin(base,p) for p in ("/propiedades?ope=A", "/propiedades?ope=V", "/propiedades")]
+    elif agency=="Carro Propiedades":
+        pages=[base,urljoin(base,"/properties-2")]
     links=set()
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -472,14 +492,14 @@ def main():
         sources = sources[:args.source_limit]
     for agency, base in sources:
         urls = candidates(session, base, max(1, min(args.max_per_source, 80)))
-        if args.browser and agency in ("Maccaroni","Inmobiliaria Falco","Heiber Osornio","Varcasia Propiedades","Acosta","MG Bienes Raíces","Vitale Feola Propiedades","Braña Inmobiliaria","Magnacca Patelli Propiedades"):
+        if args.browser and agency in ("Maccaroni","Inmobiliaria Falco","Heiber Osornio","Varcasia Propiedades","Acosta","MG Bienes Raíces","Vitale Feola Propiedades","Braña Inmobiliaria","Magnacca Patelli Propiedades","Enrique Cannone Propiedades","Jakim Propiedades","Carro Propiedades"):
             try:
                 browser_urls = browser_candidates(base, agency, max(1,min(args.max_per_source,80)))
                 urls = sorted(set(urls)|set(browser_urls),key=lambda u:(0 if "alquiler" in u.lower() else 1,u))[:max(1,min(args.max_per_source,80))]
             except Exception as exc:
                 print(json.dumps({"agency":agency,"browser_error":str(exc)[:180]},ensure_ascii=False))
         rendered={}
-        if args.browser and agency in ("Maccaroni","Acosta","MG Bienes Raíces") and urls:
+        if args.browser and agency in ("Maccaroni","Acosta","MG Bienes Raíces","Enrique Cannone Propiedades","Jakim Propiedades") and urls:
             try:
                 rendered=browser_property_html(urls)
             except Exception as exc:
